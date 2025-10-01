@@ -1,0 +1,50 @@
+.my-table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.my-table-wrapper table {
+  min-width: 1245px;       
+  width: max-content;     
+}
+
+.table th, .table td {
+  text-align: center;
+  vertical-align: middle;
+}
+
+/* Backdrop overlay */
+.modal-backdrop-custom {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.5); /* dark overlay */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1050; /* above page content */
+}
+
+/* Centered modal box */
+.modal-custom {
+  width: 100%;
+  max-width: 700px; /* similar to modal-lg */
+  background: #fff;
+  border-radius: 0.5rem;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.3);
+  animation: fadeInScale 0.2s ease-in-out;
+}
+
+/* Smooth opening animation */
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

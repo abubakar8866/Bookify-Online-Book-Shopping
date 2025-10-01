@@ -1,0 +1,29 @@
+/* Hide scrollbar by default */
+.custom-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scroll::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.3); 
+  border-radius: 4px;
+  visibility: hidden; /* hidden by default */
+}
+
+/* Show scrollbar only on hover */
+.custom-scroll:hover::-webkit-scrollbar-thumb {
+  visibility: visible;
+}
+
+/* For Firefox */
+.custom-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.custom-scroll:hover {
+  scrollbar-color: rgba(0, 0, 0, 0.3) transparent;
+}

@@ -1,0 +1,16 @@
+
+/* Styles for print window */
+@media print {
+  body * {
+    visibility: hidden; /* hide everything */
+  }
+  #printableArea, #printableArea * {
+    visibility: visible; /* show only print content */
+  }
+  #printableArea {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+}

@@ -49,7 +49,7 @@ export default function AllBooksPage() {
 
   const loadBooks = async (pageNumber) => {
     try {
-      const res = await getBooks(pageNumber, 6);
+      const res = await getBooks(pageNumber, 8);
       setBooks(res.data.content);
       setTotalPages(res.data.totalPages);
       setLoading(false);
@@ -268,61 +268,83 @@ export default function AllBooksPage() {
         <p className="text-center text-muted">No books found.</p>
       ) : (
         <>
-          <div className="row">
+          <div className="row g-4">
             {books.map((book) => (
-              <div key={book.id} className="col-md-4 mb-3">
-                <div className="card shadow-sm p-3">
-                  {/* Top Row: Image + Main Info */}
-                  <div className="d-flex">
-                    <div style={{ flex: '0 0 150px' }}>
-                      <img
-                        src={book.imageUrl}
-                        alt={book.name}
-                        className="img-fluid rounded"
-                        style={{ objectFit: 'cover', width: '100%', height: '150px' }}
-                      />
-                    </div>
-                    <div className="ms-3 flex-grow-1 d-flex flex-column justify-content-center">
-                      <h5 className="card-title mb-1">{book.name}</h5>
-                      <p className="mb-1">💵 ₹{book.price}</p>
-                      <p className="mb-1">📦 {book.quantity} in stock</p>
-                      <p className="mb-1">⭐ {book.averageRating ? book.averageRating.toFixed(1) : 'N/A'} / 5</p>
-                      {book.author && (
-                        <div className="d-flex align-items-center mt-1">
-                          <img
-                            src={book.author.imageUrl || '/placeholder.jpg'}
-                            alt={book.author.name}
-                            style={{ width: '35px', height: '35px', borderRadius: '50%', marginRight: '10px', objectFit: 'cover' }}
-                          />
-                          <strong>{book.author.name}</strong>
-                        </div>
-                      )}
-                    </div>
+              <div key={book.id} className="col-sm-6 col-md-3">
+                <div className="card h-100 shadow-sm border-0">
+                  {/* Image Section */}
+                  <div className="position-relative">
+                    <img
+                      src={book.imageUrl}
+                      alt={book.name}
+                      className="card-img-top"
+                      style={{
+                        height: "220px",
+                        objectFit: "cover",
+                        borderTopLeftRadius: "0.5rem",
+                        borderTopRightRadius: "0.5rem",
+                      }}
+                    />
+                    {/* Rating Badge */}
+                    <span
+                      className="badge bg-warning text-dark position-absolute top-0 end-0 m-2"
+                      style={{ fontSize: "0.85rem" }}
+                    >
+                      ⭐ {book.averageRating ? book.averageRating.toFixed(1) : "N/A"}
+                    </span>
                   </div>
 
-                  {/* Bottom Row: Buttons */}
-                  <div className="mt-3 border-top pt-2">
+                  {/* Card Body */}
+                  <div className="card-body d-flex flex-column">
+                    <h5 className="card-title text-truncate">{book.name}</h5>
 
-                    <div className="d-flex">
-                      <button
-                        className="btn btn-warning me-2"
-                        onClick={() => handleOpenModal(book)}
-                      >
-                        ✏️ Edit
-                      </button>
-                      <button
-                        className="btn btn-danger me-2"
-                        onClick={() => handleDelete(book.id)}
-                      >
-                        🗑️ Delete
-                      </button>
-                      <button
-                        className="btn btn-primary btn-sm"
-                        onClick={() => setSelectedBook(book)} // open modal
-                      >
-                        View Details
-                      </button>
+                    <p className="card-text mb-1">
+                      💵 <strong>₹{book.price}</strong>
+                    </p>
+
+                    {book.author && (
+                      <div className="d-flex align-items-center mt-2">
+                        <img
+                          src={book.author.imageUrl || "/placeholder.jpg"}
+                          alt={book.author.name}
+                          className="rounded-circle me-2"
+                          style={{
+                            width: "32px",
+                            height: "32px",
+                            objectFit: "cover",
+                          }}
+                        />
+                        <small className="fw-semibold">{book.author.name}</small>
+                      </div>
+                    )}
+
+                    {/* Spacer to push buttons to bottom */}
+                    <div className="mt-auto pt-2">
+                      <div className="d-flex justify-content-between gap-2">
+                        <button
+                          className="btn btn-sm btn-outline-primary d-flex align-items-center justify-content-center"
+                          onClick={() => handleOpenModal(book)}
+                        >
+                          <i className="bi bi-pencil "></i>
+                        </button>
+
+                        <button
+                          className="btn btn-sm btn-outline-danger d-flex align-items-center justify-content-center"
+                          onClick={() => handleDelete(book.id)}
+                        >
+                          <i className="bi bi-trash "></i>
+
+                        </button>
+
+                        <button
+                          className="btn btn-sm btn-outline-success d-flex align-items-center justify-content-center"
+                          onClick={() => setSelectedBook(book)}
+                        >
+                          <i className="bi bi-eye "></i>
+                        </button>
+                      </div>
                     </div>
+
                   </div>
                 </div>
               </div>
@@ -331,14 +353,14 @@ export default function AllBooksPage() {
 
           {/* Modal for Book Details */}
           {selectedBook && (
-            <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
-              <div className="modal-dialog modal-lg">
+            <div className="modal show d-flex justify-content-center align-items-center" tabIndex="-1" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
+              <div className="modal-dialog modal-lg" style={{paddingBottom:"20px",paddingTop:"20px"}} >
                 <div className="modal-content shadow-lg rounded-3">
-                  <div className="modal-header bg-primary text-white">
+                  <div className="modal-header bg-primary text-white rounded-3">
                     <h5 className="modal-title">{selectedBook.name}</h5>
                     <button
                       type="button"
-                      className="btn-close"
+                      className="btn-close btn-close-white"
                       onClick={() => setSelectedBook(null)}
                     ></button>
                   </div>
@@ -370,7 +392,7 @@ export default function AllBooksPage() {
                         >
                           {selectedBook.description}
                         </p>
-                        
+
                         <p><strong>Rating:</strong> {selectedBook.averageRating?.toFixed(1) || 'N/A'} / 5</p>
                         <p><small className="text-muted">📅 Published: {selectedBook.createdAt ? new Date(selectedBook.createdAt).toLocaleString() : 'N/A'}</small></p>
                         <p><small className="text-muted">🔄 Updated: {selectedBook.updatedAt ? new Date(selectedBook.updatedAt).toLocaleString() : 'N/A'}</small></p>
@@ -485,16 +507,16 @@ export default function AllBooksPage() {
 
       {/* Modal */}
       {modalOpen && (
-        <div className="modal d-block" tabIndex="-1" role="dialog">
-          <div className="modal-dialog modal-lg" role="document">
-            <div className="modal-content">
-              <div className="modal-header">
+        <div className="modal d-flex justify-content-center align-items-center" tabIndex="-1" role="dialog" style={{ backgroundColor: "rgba(0,0,0,0.5)" }} >
+          <div className="modal-dialog modal-lg" role="document" style={{paddingBottom:"20px",paddingTop:"20px"}}>
+            <div className="modal-content shadow-lg rounded-3">
+              <div className="modal-header bg-primary text-white rounded-3">
                 <h5 className="modal-title">
                   {editing ? "Edit Book" : "Add Book"}
                 </h5>
                 <button
                   type="button"
-                  className="btn-close"
+                  className="btn-close btn-close-white"
                   onClick={handleCloseModal}
                 ></button>
               </div>
@@ -614,9 +636,10 @@ export default function AllBooksPage() {
                     )}
                   </div>
 
-                  <button type="submit" className="btn btn-success">
+                  <button type="submit" className="btn btn-success me-2">
                     {editing ? "Update" : "Create"}
                   </button>
+                  <button className="btn btn-secondary" onClick={() => setModalOpen(false)}>Cancel</button>
                 </form>
               </div>
             </div>

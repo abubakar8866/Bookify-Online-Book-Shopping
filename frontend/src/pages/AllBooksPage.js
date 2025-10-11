@@ -21,7 +21,7 @@ export default function BooksPage() {
 
   async function fetchBooks(page = 0) {
     try {
-      const res = await getUserBooks(page, 6);
+      const res = await getUserBooks(page, 8);
       const data = res.data;
       const booksData = data.content || data;
       const booksWithImage = booksData.map(b => ({
@@ -123,62 +123,84 @@ export default function BooksPage() {
       {books.length === 0 ? (
         <p className="text-center text-muted">No books found.</p>
       ) : (
-        <div className="row">
-          {books.map(b => (
-            <div key={b.id} className="col-md-4 mb-3">
-              <div className="card shadow-sm p-3">
-                {/* Top: Image + Main Info */}
-                <div className="d-flex">
-                  <div style={{ flex: '0 0 150px' }}>
-                    <img
-                      src={b.imageUrl}
-                      alt={b.name}
-                      className="img-fluid rounded"
-                      style={{ objectFit: 'cover', width: '100%', height: '150px' }}
-                    />
-                  </div>
-                  <div className="ms-3 flex-grow-1 d-flex flex-column justify-content-center">
-                    <h5 className="card-title mb-1">{b.name}</h5>
-                    <p className="mb-1">💵 ₹{b.price}</p>
-                    <p className="mb-1">📦 {b.quantity} in stock</p>
-                    <p className="mb-1">⭐ {b.averageRating ? b.averageRating.toFixed(1) : 'N/A'} / 5</p>
-                    {b.author && (
-                      <div className="d-flex align-items-center mt-1">
-                        <img
-                          src={b.author.imageUrl || '/placeholder.jpg'}
-                          alt={b.author.name}
-                          style={{ width: '35px', height: '35px', borderRadius: '50%', marginRight: '10px', objectFit: 'cover' }}
-                        />
-                        <strong>{b.author.name}</strong>
-                      </div>
-                    )}
-                  </div>
+        <div className="row g-4">
+          {books.map((b) => (
+            <div key={b.id} className="col-sm-6 col-md-3">
+              <div className="card h-100 shadow-sm border-0">
+                {/* Image Section */}
+                <div className="position-relative">
+                  <img
+                    src={b.imageUrl}
+                    alt={b.name}
+                    className="card-img-top"
+                    style={{
+                      height: "220px",
+                      objectFit: "cover",
+                      borderTopLeftRadius: "0.5rem",
+                      borderTopRightRadius: "0.5rem",
+                    }}
+                  />
+                  {/* Rating Badge */}
+                  <span
+                    className="badge bg-warning text-dark position-absolute top-0 end-0 m-2"
+                    style={{ fontSize: "0.85rem" }}
+                  >
+                    ⭐ {b.averageRating ? b.averageRating.toFixed(1) : "N/A"}
+                  </span>
                 </div>
 
-                {/* Bottom: Buttons */}
-                <div className="mt-0 pt-2">
+                {/* Card Body */}
+                <div className="card-body d-flex flex-column">
+                  <h5 className="card-title text-truncate">{b.name}</h5>
 
-                  <div className="d-flex justify-content-between mt-2">
-                    <button
-                      className="btn btn-primary btn-sm"
-                      onClick={() => setSelectedBook(b)} // open modal
-                    >
-                      View Details
-                    </button>
-                    <button
-                      className="btn btn-success btn-sm"
-                      onClick={() => handleAddToCart(b.id)}
-                      disabled={!b.quantity || b.quantity < 1}
-                    >
-                      {b.quantity < 1 ? "Out of Stock" : "Add to Cart"}
-                    </button>
-                    <button
-                      className="btn btn-outline-primary btn-sm"
-                      onClick={() => handleAddToWishlist(b.id)}
-                    >
-                      Wishlist
-                    </button>
+                  <p className="card-text mb-1">
+                    💵 <strong>₹{b.price}</strong>
+                  </p>
+
+                  {b.author && (
+                    <div className="d-flex align-items-center mt-2">
+                      <img
+                        src={b.author.imageUrl || "/placeholder.jpg"}
+                        alt={b.author.name}
+                        className="rounded-circle me-2"
+                        style={{
+                          width: "32px",
+                          height: "32px",
+                          objectFit: "cover",
+                        }}
+                      />
+                      <small className="fw-semibold">{b.author.name}</small>
+                    </div>
+                  )}
+
+                  {/* Spacer to push buttons to bottom */}
+                  <div className="mt-auto pt-2">
+                    <div className="d-flex justify-content-between gap-2">
+                      <button
+                        className="btn btn-sm btn-outline-primary d-flex align-items-center justify-content-center"
+                        onClick={() => setSelectedBook(b)}
+                      >
+                        <i className="bi bi-eye "></i>
+                      </button>
+
+                      <button
+                        className="btn btn-sm btn-outline-success d-flex align-items-center justify-content-center"
+                        onClick={() => handleAddToCart(b.id)}
+                        disabled={!b.quantity || b.quantity < 1}
+                      >
+                        <i className="bi bi-cart-plus "></i>
+                        
+                      </button>
+
+                      <button
+                        className="btn btn-sm btn-outline-danger d-flex align-items-center justify-content-center"
+                        onClick={() => handleAddToWishlist(b.id)}
+                      >
+                        <i className="bi bi-heart "></i>
+                      </button>
+                    </div>
                   </div>
+
                 </div>
               </div>
             </div>
@@ -190,10 +212,10 @@ export default function BooksPage() {
 
       {/* Modal for Book Details */}
       {selectedBook && (
-        <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
-          <div className="modal-dialog modal-lg ">
+        <div className="modal show d-flex justify-content-center align-items-center" tabIndex="-1" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
+          <div className="modal-dialog modal-lg" style={{paddingBottom:"20px",paddingTop:"20px"}} >
             <div className="modal-content shadow-lg rounded-3">
-              <div className="modal-header bg-primary text-white">
+              <div className="modal-header bg-primary text-white rounded-3">
                 <h5 className="modal-title">{selectedBook.name}</h5>
                 <button
                   type="button"

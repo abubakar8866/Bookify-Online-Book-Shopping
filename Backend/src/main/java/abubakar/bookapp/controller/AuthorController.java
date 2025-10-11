@@ -47,7 +47,7 @@ public class AuthorController {
     @GetMapping
     public ResponseEntity<?> getAll(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "4") int size) {
+            @RequestParam(defaultValue = "3") int size) {
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
         Page<Author> authorsPage = repo.findAll(pageable);

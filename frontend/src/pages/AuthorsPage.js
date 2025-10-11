@@ -28,7 +28,7 @@ export default function AuthorsPage() {
     onConfirm: null
   });
 
-  const pageSize = 4;
+  const pageSize = 3;
   const languageOptions = ["Java", "Python", "JavaScript", "C++", "Go"];
 
   function initialFormState() {
@@ -236,7 +236,7 @@ export default function AuthorsPage() {
   return (
     <div className="container mt-4 mb-0">
       {/* Header */}
-      <div className="d-flex justify-content-between mb-3 mt-3 align-items-center">
+      <div className="d-flex justify-content-between mb-2 mt-2 align-items-center">
         <h3 className="fw-bold text-primary">Authors</h3>
         <div>
           <button className="btn btn-primary shadow-sm rounded" onClick={() => handleOpenModal()}>
@@ -252,13 +252,13 @@ export default function AuthorsPage() {
         <>
           <div className="row g-4">
             {authors.map(author => (
-              <div key={author.id} className="col-md-3 mb-0">
+              <div key={author.id} className="col-sm-12 col-md-4 mb-0">
                 <div className="card h-100 shadow-sm">
                   <img
                     src={author.imageUrl}
                     alt={author.name}
                     className="card-img-top"
-                    style={{ height: "250px", objectFit: "cover", backgroundColor: "#f0f0f0" }}
+                    style={{ height: "270px", objectFit: "fill", backgroundColor: "#f0f0f0" }}
                     onError={e => (e.target.src = "/default-avatar.png")}
                   />
                   <div className="card-body">
@@ -371,10 +371,10 @@ export default function AuthorsPage() {
 
       {/* Modal */}
       {modalOpen && (
-        <div className="modal fade show d-block" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
-          <div className="modal-dialog modal-lg">
+        <div className="modal fade show d-flex justify-content-center align-items-center" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
+          <div className="modal-dialog modal-lg" style={{paddingBottom:"20px",paddingTop:"20px"}}>
             <div className="modal-content shadow-lg rounded-3">
-              <div className="modal-header bg-primary text-white">
+              <div className="modal-header bg-primary text-white rounded-3">
                 <h5 className="modal-title">{editingAuthor ? "Edit Author" : "Add Author"}</h5>
                 <button className="btn-close btn-close-white" onClick={() => setModalOpen(false)}></button>
               </div>

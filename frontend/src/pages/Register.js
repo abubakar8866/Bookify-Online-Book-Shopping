@@ -59,7 +59,7 @@ export default function Register() {
   };
 
   return (
-    <div className="d-flex align-items-center justify-content-center vh-100 reg">
+    <div className="d-flex align-items-center justify-content-center reg" style={{height:"90vh"}}>
       <div className="card shadow-lg p-4" style={{ width: "100%", maxWidth: 450 }}>
         <div className="text-center mb-4">
           <i className="bi bi-person-plus-fill text-success" style={{ fontSize: 50 }}></i>

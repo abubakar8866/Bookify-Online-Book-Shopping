@@ -55,7 +55,7 @@ public class BookController {
     @GetMapping
     public ResponseEntity<?> list(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "6") int size) {
+            @RequestParam(defaultValue = "8") int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
         Page<Book> books = bookRepo.findAll(pageable);
         return ResponseEntity.ok(books);

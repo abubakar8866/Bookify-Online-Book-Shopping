@@ -123,7 +123,7 @@ function AdminOrderPage() {
 
                                 <div className="my-table-wrapper table-responsive shadow-sm rounded">
                                     <table className="table table-striped table-hover text-center mb-0 align-middle">
-                                        <thead className="table-light sticky-top">
+                                        <thead className="table-light ">
                                             <tr>
                                                 <th>Sr No</th>
                                                 <th>Name</th>

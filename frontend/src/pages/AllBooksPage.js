@@ -117,7 +117,7 @@ export default function BooksPage() {
   };
 
   return (
-    <div className="container mt-4 mb-5">
+    <div className="container mt-4 mb-5" style={{maxWidth:"90vw"}}>
       <h3 className="mb-4 text-center fw-bold text-primary">Books</h3>
 
       {books.length === 0 ? (

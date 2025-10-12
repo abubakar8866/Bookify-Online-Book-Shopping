@@ -72,7 +72,7 @@ function AdminDashboard() {
   };
 
   return (
-    <div className="container py-3" >
+    <div className="container py-3" style={{overflow:"hidden",maxWidth:"90vw"}}>
       <h2 className="mb-4 fw-bold text-primary" >
         <i className="bi bi-speedometer2 me-2"></i> Admin Dashboard
       </h2>
@@ -86,7 +86,7 @@ function AdminDashboard() {
         <>
           {/* Dashboard Cards */}
           <div className="row mb-4 g-3">
-            <div className="col-12 col-sm-6 col-lg-3">
+            <div className="col-md-3">
               <div className="card shadow-sm border-0 text-white bg-primary h-100">
                 <div className="card-body text-center">
                   <i className="bi bi-basket2-fill fs-3"></i>
@@ -172,7 +172,7 @@ function AdminDashboard() {
             </h4>
             <div className="table-responsive" style={{ maxHeight: "400px", overflowY: "auto" }}>
               <table className="table table-striped table-hover align-middle">
-                <thead className="table-dark sticky-top">
+                <thead className="table-dark">
                   <tr>
                     <th>#</th>
                     <th>Email</th>

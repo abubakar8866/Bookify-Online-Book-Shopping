@@ -234,7 +234,7 @@ export default function AuthorsPage() {
   });
 
   return (
-    <div className="container mt-4 mb-0">
+    <div className="container mt-4 mb-0" style={{maxWidth:"90vw"}}>
       {/* Header */}
       <div className="d-flex justify-content-between mb-2 mt-2 align-items-center">
         <h3 className="fw-bold text-primary">Authors</h3>

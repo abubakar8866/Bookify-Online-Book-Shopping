@@ -124,7 +124,7 @@ const InformationPage = () => {
       </ul>
 
       {/* Table */}
-      <div className="table-responsive">{renderTable()}</div>
+      <div className="table-responsive" style={{  maxHeight: '100vh', overflowY: 'auto', maxWidth:'90vw' }}>{renderTable()}</div>
     </div>
   );
 };

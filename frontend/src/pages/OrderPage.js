@@ -337,7 +337,7 @@ function OrderPage() {
       {orders.length === 0 ? (
         <p className="text-muted text-center">No orders found.</p>
       ) : (
-        <div style={{ overflowX: 'auto', maxHeight: '85vh', overflowY: 'auto' }}>
+        <div style={{ maxHeight: '100vh', overflowY: 'auto', maxWidth:'90vw' }}>
           {Object.entries(groupedOrders).map(([time, batch], batchIndex) => {
             const { id, userName, orderMode, orderStatus, address, phoneNumber, deliveryDate } = batch[0];
 
@@ -347,7 +347,7 @@ function OrderPage() {
                   Order Batch {batchIndex + 1} (Placed at: {time})
                 </h5>
 
-                <div className="mb-2 d-flex flex-wrap gap-3 align-items-center">
+                <div className="mb-2 d-flex flex-wrap gap-1 align-items-center">
                   <strong>Name:</strong> {userName} |{" "}
                   <strong>Address:</strong> {address} |{" "}
                   <strong>Phone:</strong> {phoneNumber} |{" "}

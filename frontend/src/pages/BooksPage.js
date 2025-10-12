@@ -256,7 +256,7 @@ export default function AllBooksPage() {
   if (loading) return <p>Loading all books...</p>;
 
   return (
-    <div className="container mt-3 mb-2">
+    <div className="container mt-3 mb-2" style={{maxWidth:"90vw"}}>
       <div className="d-flex justify-content-between mb-3 align-items-center">
         <h2 className="fw-bold text-primary">Books</h2>
         <button className="btn btn-primary" onClick={() => handleOpenModal()}>

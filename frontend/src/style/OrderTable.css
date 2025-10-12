@@ -4,8 +4,9 @@
 }
 
 .my-table-wrapper table {
-  min-width: 1245px;       
-  width: max-content;     
+  min-width: 700px;       
+  width: 100%;     
+  overflow-x: auto;
 }
 
 .table th, .table td {
@@ -46,5 +47,12 @@
   to {
     opacity: 1;
     transform: scale(1);
+  }
+}
+
+@media (max-width: 576px) {
+  .table th, .table td {
+    font-size: 1rem;
+    white-space: nowrap;
   }
 }

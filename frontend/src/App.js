@@ -51,7 +51,7 @@ function App() {
         <LeftNav />
 
         {/* Main Content */}
-        <div className="flex-grow-1 p-0">
+        <div className="flex-grow-1 p-0" style={{overflowX:"hidden"}}>
           <Routes>
             {/* Default route goes to login */}
             <Route path="/" element={<Navigate to="/login" replace />} />

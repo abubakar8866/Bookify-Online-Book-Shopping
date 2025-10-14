@@ -1,0 +1,9 @@
+.sidebar-slide {
+  transition: transform 0.3s ease;
+}
+.sidebar-slide.open {
+  transform: translateX(0);
+}
+.sidebar-slide.closed {
+  transform: translateX(-100%);
+}

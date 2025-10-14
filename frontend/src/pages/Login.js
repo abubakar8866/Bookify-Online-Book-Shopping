@@ -83,7 +83,7 @@ export default function Login() {
 
   return (
     <div
-      className="d-flex align-items-center justify-content-center" style={{height:"90vh"}}
+      className="d-flex align-items-center justify-content-center" style={{ height: "90vh" }}
     >
       <div className="card shadow-lg p-4" style={{ width: "100%", maxWidth: 450 }}>
         <div className="text-center mb-4">
@@ -131,23 +131,21 @@ export default function Login() {
           </div>
 
 
-          {/* Buttons */}
-          <div className="d-flex align-items-center justify-content-between mt-4">
-            <button className="btn btn-primary w-50">Login</button>
-            <button
-              type="button"
-              className="btn btn-outline-secondary"
-              style={{ width: "25%" }}
-              onClick={() => {
-                setEmail("");
-                setPassword("");
-                setErrors({});
-                setErr("");
-              }}
-            >
-              Reset
-            </button>
-          </div>
+
+          <button className="btn btn-primary w-100 mt-2 mb-2">Login</button>
+
+          <button
+            type="button"
+            className="btn btn-outline-secondary w-100"
+            onClick={() => {
+              setEmail("");
+              setPassword("");
+              setErrors({});
+              setErr("");
+            }}
+          >
+            Reset
+          </button>
 
           {/* Forgot Password */}
           <div className="text-center mt-3">
@@ -191,15 +189,15 @@ export default function Login() {
                   onChange={(e) => setForgotEmail(e.target.value)}
                 />
               </div>
-              <div className="modal-footer">
+              <div className="modal-footer d-flex align-items-center justify-content-center" style={{flexDirection:"column-reverse"}}>
                 <button
-                  className="btn btn-secondary"
+                  className="btn btn-secondary w-100"
                   onClick={() => setShowForgot(false)}
                 >
                   Close
                 </button>
                 <button
-                  className="btn btn-primary d-flex align-items-center"
+                  className="btn btn-primary d-flex align-items-center justify-content-center w-100"
                   onClick={sendForgotPassword}
                   disabled={sending}
                 >

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { isAuthenticated, getUserRole } from "../utils/auth";
 import "bootstrap-icons/font/bootstrap-icons.css";
+import '../../src/style/leftNav.css';
 
 function LeftNav() {
   const navigate = useNavigate();
@@ -147,31 +148,34 @@ function LeftNav() {
       {/* Always visible top bar with Bookify text + hamburger */}
       <div
         className="d-flex align-items-center bg-light border-bottom shadow-sm position-fixed top-0 start-0 w-100 py-2"
-        style={{ zIndex: 900, height: "56px",paddingLeft:"0px" }}
+        style={{ zIndex: 900, height: "56px", paddingLeft: "0px" }}
       >
-        <button className="btn me-1" onClick={toggleSidebar} style={{border:"none"}}>
-          <i className="bi bi-list fs-3"></i>
+        <button className="btn me-1" onClick={toggleSidebar} style={{ border: "none" }}>
+          {isOpen ? (
+            <i className="bi bi-x-lg fs-3"></i>
+          ) : (
+            <i className="bi bi-list fs-3"></i>
+          )}
         </button>
         <h4 className="m-0">📚 Bookify</h4>
       </div>
 
-      {/* Sidebar overlay */}
+      {/* Sidebar overlay (dark background when open) */}
       {isOpen && (
-        <>
-          <div
-            className="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50"
-            style={{ zIndex: 850 }}
-            onClick={toggleSidebar}
-          ></div>
-
-          <div
-            className="bg-light border-end vh-100 shadow-sm position-fixed top-0 start-0"
-            style={{ width: "220px", zIndex: 850, padding: "70px 10px 10px 10px" }}
-          >
-            {renderSidebarContent()}
-          </div>
-        </>
+        <div
+          className="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50"
+          style={{ zIndex: 850 }}
+          onClick={toggleSidebar}
+        ></div>
       )}
+
+      {/* Sidebar panel with slide animation */}
+      <div
+        className={`bg-light border-end vh-100 shadow-sm position-fixed top-0 start-0 sidebar-slide ${isOpen ? 'open' : 'closed'}`}
+        style={{ width: "220px", zIndex: 851, padding: "70px 10px 10px 10px" }}
+      >
+        {renderSidebarContent()}
+      </div>
     </>
   );
 }

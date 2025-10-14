@@ -85,7 +85,7 @@ function AdminOrderPage() {
             {orders.length === 0 ? (
                 <p className="text-muted text-center">No orders found.</p>
             ) : (
-                <div style={{  maxHeight: '100vh', overflowY: 'auto', maxWidth:'90vw' }}>
+                <div style={{  maxHeight: '100vh', overflowY: 'auto', maxWidth:'90vw', overflowX:"hidden" }}>
                     {Object.entries(groupedOrders).map(([time, batch], batchIndex) => {
                         const { id, userName, orderMode, orderStatus, address, phoneNumber, deliveryDate } = batch[0];
 

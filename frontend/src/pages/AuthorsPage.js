@@ -234,7 +234,7 @@ export default function AuthorsPage() {
   });
 
   return (
-    <div className="container mt-4 mb-0" style={{maxWidth:"90vw"}}>
+    <div className="container mt-4 mb-0" style={{ maxWidth: "90vw" }}>
       {/* Header */}
       <div className="d-flex justify-content-between mb-2 mt-2 align-items-center">
         <h3 className="fw-bold text-primary">Authors</h3>
@@ -297,11 +297,17 @@ export default function AuthorsPage() {
           {/* Pagination (only show if more than one page exists) */}
           {totalPages > 1 && (
             <nav className="mt-4">
-              <ul className="pagination justify-content-center">
+              <ul className="pagination justify-content-center align-items-center flex-wrap gap-1"
+                style={{
+                  flexWrap: "wrap",
+                  rowGap: "0.5rem",
+                  columnGap: "0.3rem",
+                }}
+              >
 
                 {/* First */}
                 <li className={`page-item ${page === 0 ? "disabled" : ""}`}>
-                  <button className="page-link" onClick={() => setPage(0)}>
+                  <button className="page-link px-3 py-2 text-nowrap rounded-3" onClick={() => setPage(0)}>
                     First
                   </button>
                 </li>
@@ -309,7 +315,7 @@ export default function AuthorsPage() {
                 {/* Previous */}
                 <li className={`page-item ${page === 0 ? "disabled" : ""}`}>
                   <button
-                    className="page-link"
+                    className="page-link px-3 py-2 text-nowrap rounded-3"
                     onClick={() => setPage(page - 1)}
                   >
                     Previous
@@ -331,13 +337,13 @@ export default function AuthorsPage() {
                       {/* Dots if there's a gap */}
                       {idx > 0 && arr[idx] - arr[idx - 1] > 1 && (
                         <li className="page-item disabled">
-                          <span className="page-link">...</span>
+                          <span className="page-link px-3 py-2 rounded-5">...</span>
                         </li>
                       )}
                       <li
                         className={`page-item ${i === page ? "active" : ""}`}
                       >
-                        <button className="page-link" onClick={() => setPage(i)}>
+                        <button className="page-link px-3 py-2 rounded-5" onClick={() => setPage(i)}>
                           {i + 1}
                         </button>
                       </li>
@@ -349,7 +355,7 @@ export default function AuthorsPage() {
                   className={`page-item ${page === totalPages - 1 ? "disabled" : ""}`}
                 >
                   <button
-                    className="page-link"
+                    className="page-link px-3 py-2 text-nowrap rounded-3"
                     onClick={() => setPage(page + 1)}
                   >
                     Next
@@ -358,7 +364,7 @@ export default function AuthorsPage() {
 
                 {/* Last */}
                 <li className={`page-item ${page === totalPages - 1 ? "disabled" : ""}`}>
-                  <button className="page-link" onClick={() => setPage(totalPages - 1)}>
+                  <button className="page-link px-3 py-2 text-nowrap rounded-3" onClick={() => setPage(totalPages - 1)}>
                     Last
                   </button>
                 </li>
@@ -372,10 +378,10 @@ export default function AuthorsPage() {
       {/* Modal */}
       {modalOpen && (
         <div className="modal fade show d-flex justify-content-center align-items-center" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
-          <div className="modal-dialog modal-lg" style={{paddingBottom:"20px",paddingTop:"20px"}}>
+          <div className="modal-dialog modal-lg" style={{ paddingBottom: "20px", paddingTop: "20px" }}>
             <div className="modal-content shadow-lg rounded-3">
               <div className="modal-header bg-primary text-white rounded-3">
-                <h5 className="modal-title">{editingAuthor ? "Edit Author" : "Add Author"}</h5>
+                <h5 className="modal-title">{editingAuthor ? "Edit" : "Add"}</h5>
                 <button className="btn-close btn-close-white" onClick={() => setModalOpen(false)}></button>
               </div>
               <div className="modal-body">
@@ -452,9 +458,9 @@ export default function AuthorsPage() {
                   )}
                 </div>
               </div>
-              <div className="modal-footer">
-                <button className="btn btn-secondary" onClick={() => setModalOpen(false)}>Cancel</button>
-                <button className="btn btn-primary" onClick={handleSave}>Save</button>
+              <div className="modal-footer d-flex justify-content-center align-items-center flex-wrap gap-1">                
+                <button className="btn btn-primary w-100" onClick={handleSave}>{editingAuthor ? "Edit" : "Save"}</button>
+                <button className="btn btn-secondary w-100" onClick={() => setModalOpen(false)}>Cancel</button>
               </div>
             </div>
           </div>

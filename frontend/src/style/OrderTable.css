@@ -19,7 +19,7 @@
   position: fixed;
   top: 0;
   left: 0;
-  width: 100vw;
+  width: 100%;
   height: 100vh;
   background: rgba(0, 0, 0, 0.5); /* dark overlay */
   display: flex;
@@ -30,7 +30,7 @@
 
 /* Centered modal box */
 .modal-custom {
-  width: 100%;
+  width: 90%;
   max-width: 700px; /* similar to modal-lg */
   background: #fff;
   border-radius: 0.5rem;

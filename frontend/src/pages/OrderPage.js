@@ -648,9 +648,9 @@ function OrderPage() {
                   </div>
                 </form>
               </div>
-              <div className="modal-footer">
-                <button className="btn btn-secondary mx-2" onClick={() => setEditingOrder(null)}>Cancel</button>
-                <button className="btn btn-primary" onClick={handleSave}>Save Changes</button>
+              <div className="modal-footer d-flex justify-content-center align-items-center flex-wrap gap-1">                
+                <button className="btn btn-primary w-100" onClick={handleSave}>Edit</button>
+                <button className="btn btn-secondary w-100" onClick={() => setEditingOrder(null)}>Cancel</button>
               </div>
             </div>
           </div>
@@ -690,9 +690,9 @@ function OrderPage() {
                   {reviewErrors.review && <div className="text-danger">{reviewErrors.review}</div>}
                 </div>
               </div>
-              <div className="modal-footer">
-                <button className="btn btn-secondary me-2" onClick={() => setReviewModal({ visible: false, orderId: null, bookId: null })}>Cancel</button>
-                <button className="btn btn-primary" onClick={handleReviewSubmit}>Submit</button>
+              <div className="modal-footer d-flex justify-content-center align-items-center flex-wrap gap-1">                
+                <button className="btn btn-primary w-100" onClick={handleReviewSubmit}>Submit</button>
+                <button className="btn btn-secondary w-100" onClick={() => setReviewModal({ visible: false, orderId: null, bookId: null })}>Cancel</button>
               </div>
             </div>
           </div>

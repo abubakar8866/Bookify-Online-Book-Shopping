@@ -24,12 +24,12 @@ function AlertModal({ show, onHide, title, message, type = "info", onConfirm }) 
       <Modal.Body>{message}</Modal.Body>
       <Modal.Footer>
         {onConfirm ? (
-          <>
-            <Button variant="secondary" onClick={onHide}>Cancel</Button>
-            <Button variant="danger" onClick={() => { onConfirm(); onHide(); }}>Yes, Remove</Button>
-          </>
+          <div className="d-flex justify-content-center align-items-center flex-wrap gap-1 w-100">
+            <Button variant="danger" className="w-100" onClick={() => { onConfirm(); onHide(); }}>Remove</Button>
+            <Button variant="secondary" className="w-100" onClick={onHide}>Cancel</Button>
+          </div>
         ) : (
-          <Button variant="primary" onClick={onHide}>OK</Button>
+          <Button variant="primary" className="w-100" onClick={onHide}>OK</Button>
         )}
       </Modal.Footer>
     </Modal>

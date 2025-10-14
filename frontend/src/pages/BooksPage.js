@@ -256,11 +256,11 @@ export default function AllBooksPage() {
   if (loading) return <p>Loading all books...</p>;
 
   return (
-    <div className="container mt-3 mb-2" style={{maxWidth:"90vw"}}>
+    <div className="container mt-3 mb-2" style={{ maxWidth: "90vw" }}>
       <div className="d-flex justify-content-between mb-3 align-items-center">
         <h2 className="fw-bold text-primary">Books</h2>
         <button className="btn btn-primary" onClick={() => handleOpenModal()}>
-          Add Book
+          Add
         </button>
       </div>
 
@@ -354,7 +354,7 @@ export default function AllBooksPage() {
           {/* Modal for Book Details */}
           {selectedBook && (
             <div className="modal show d-flex justify-content-center align-items-center" tabIndex="-1" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
-              <div className="modal-dialog modal-lg" style={{paddingBottom:"20px",paddingTop:"20px"}} >
+              <div className="modal-dialog modal-lg" style={{ paddingBottom: "20px", paddingTop: "20px" }} >
                 <div className="modal-content shadow-lg rounded-3">
                   <div className="modal-header bg-primary text-white rounded-3">
                     <h5 className="modal-title">{selectedBook.name}</h5>
@@ -376,7 +376,7 @@ export default function AllBooksPage() {
                           style={{ width: '100%', height: '250px' }}
                         />
                       </div>
-                      <div className="col-md-6">
+                      <div className="col-md-6 mt-3">
                         <p><strong>Price:</strong> ₹{selectedBook.price}</p>
                         <p><strong>Quantity:</strong> {selectedBook.quantity}</p>
                         <p><strong>Author:</strong> {selectedBook.author?.name}</p>
@@ -438,15 +438,21 @@ export default function AllBooksPage() {
           {/* Pagination */}
           {totalPages > 1 && (
             <nav style={{ paddingTop: '10px' }}>
-              <ul className="pagination justify-content-center">
+              <ul className="pagination justify-content-center align-items-center flex-wrap gap-1"
+                style={{
+                  flexWrap: "wrap",
+                  rowGap: "0.5rem",
+                  columnGap: "0.3rem",
+                }}
+              >
                 <li className={`page-item ${page === 0 ? "disabled" : ""}`}>
-                  <button className="page-link" onClick={() => setPage(0)}>
+                  <button className="page-link px-3 py-2 text-nowrap rounded-3" onClick={() => setPage(0)}>
                     First
                   </button>
                 </li>
                 <li className={`page-item ${page === 0 ? "disabled" : ""}`}>
                   <button
-                    className="page-link"
+                    className="page-link px-3 py-2 text-nowrap rounded-3"
                     onClick={() => setPage((prev) => Math.max(prev - 1, 0))}
                   >
                     Previous
@@ -466,7 +472,7 @@ export default function AllBooksPage() {
                   for (let i = start; i < end; i++) {
                     pages.push(
                       <li key={i} className={`page-item ${page === i ? "active" : ""}`}>
-                        <button className="page-link" onClick={() => setPage(i)}>
+                        <button className="page-link px-3 py-2 rounded-5" onClick={() => setPage(i)}>
                           {i + 1}
                         </button>
                       </li>
@@ -480,7 +486,7 @@ export default function AllBooksPage() {
                     }`}
                 >
                   <button
-                    className="page-link"
+                    className="page-link px-3 py-2 text-nowrap rounded-3"
                     onClick={() =>
                       setPage((prev) => Math.min(prev + 1, totalPages - 1))
                     }
@@ -493,7 +499,7 @@ export default function AllBooksPage() {
                     }`}
                 >
                   <button
-                    className="page-link"
+                    className="page-link px-3 py-2 text-nowrap rounded-3"
                     onClick={() => setPage(totalPages - 1)}
                   >
                     Last
@@ -508,11 +514,11 @@ export default function AllBooksPage() {
       {/* Modal */}
       {modalOpen && (
         <div className="modal d-flex justify-content-center align-items-center" tabIndex="-1" role="dialog" style={{ backgroundColor: "rgba(0,0,0,0.5)" }} >
-          <div className="modal-dialog modal-lg" role="document" style={{paddingBottom:"20px",paddingTop:"20px"}}>
+          <div className="modal-dialog modal-lg" role="document" style={{ paddingBottom: "20px", paddingTop: "20px" }}>
             <div className="modal-content shadow-lg rounded-3">
               <div className="modal-header bg-primary text-white rounded-3">
                 <h5 className="modal-title">
-                  {editing ? "Edit Book" : "Add Book"}
+                  {editing ? "Edit" : "Add"}
                 </h5>
                 <button
                   type="button"
@@ -636,10 +642,12 @@ export default function AllBooksPage() {
                     )}
                   </div>
 
-                  <button type="submit" className="btn btn-success me-2">
-                    {editing ? "Update" : "Create"}
-                  </button>
-                  <button className="btn btn-secondary" onClick={() => setModalOpen(false)}>Cancel</button>
+                  <div className="modal-footer d-flex justify-content-center align-items-center flex-wrap gap-1">
+                    <button type="submit" className="btn btn-success w-100">
+                      {editing ? "Update" : "Create"}
+                    </button>
+                    <button className="btn btn-secondary w-100" onClick={() => setModalOpen(false)}>Cancel</button>
+                  </div>
                 </form>
               </div>
             </div>

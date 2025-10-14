@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import '../../src/style/OrderModal.css';
 import AlertModal from '../components/AlertModal';
 import '../../src/style/All.css';
+import '../../src/style/cart.css';
 
 function CartPage() {
   const [cartItems, setCartItems] = useState([]);
@@ -219,13 +220,20 @@ function CartPage() {
 
 
   return (
-    <div className="container mt-4 overflow-x-hidden">
+    <div className="container mt-4 px-2 px-sm-3 px-md-4 overflow-x-hidden">
       <h2 className="mb-4 text-center text-primary fw-bold">Your Cart</h2>
-      <div className="d-flex flex-column flex-lg-row gap-3">
+      <div className="d-flex flex-column flex-lg-row gap-4 align-items-stretch">
 
         {/* Order Summary */}
-        <div style={{ minWidth: '280px', position: 'sticky', top: '20px', alignSelf: 'flex-start' }}>
-          <div className="card p-4 shadow-sm rounded">
+        <div className="order-summary"
+          style={{
+            minWidth: "100%",
+            maxWidth: "100%",
+          }}
+        >
+          <div className="card p-4 shadow-sm rounded"
+            style={{ position: "sticky", top: "20px" }}
+          >
             <h5 className="fw-bold text-secondary">Order Summary</h5>
             <hr />
             <p><strong>Items:</strong> {cartItems.reduce((sum, item) => sum + item.quantity, 0)}</p>
@@ -240,16 +248,16 @@ function CartPage() {
         </div>
 
         {/* Cart Items */}
-        <div className="flex-grow-1 overflow-x-hidden" style={{ maxHeight: '80vh', overflowY: 'auto' }}>
+        <div className="flex-grow-1 p-2" style={{ maxHeight: '80vh', overflow: 'hidden auto' }}>
           {cartItems.length === 0 ? (
             <p className="text-muted text-center mt-4">No items in cart.</p>
           ) : (
-            <div className="row g-3 overflow-x-hidden">
+            <div className="row g-3">
               {cartItems.map(item => (
-                <div key={item.id} className="col-12 p-3 overflow-x-hidden">
-                  <div className="card shadow-sm p-3 d-flex flex-row align-items-center justify-content-between hover-shadow rounded overflow-x-hidden">
+                <div key={item.id} className="col-12 col-md-6 col-lg-12 ">
+                  <div className="card shadow-sm p-3 d-flex flex-column flex-sm-row align-items-center justify-content-between rounded">
 
-                    <div className="d-flex align-items-center overflow-x-hidden">
+                    <div className="d-flex align-items-center w-100 w-sm-auto mb-3 mb-sm-0">
                       <img
                         src={item.book.imageUrl}
                         alt={item.book.name}
@@ -264,13 +272,22 @@ function CartPage() {
                       </div>
                     </div>
 
-                    <div className="d-flex align-items-center gap-2 overflow-x-hidden">
-                      <button className="btn btn-outline-secondary btn-sm" onClick={() => updateQuantity(item.id, -1)}>-</button>
+                    <div className="d-flex align-items-center gap-2 mb-2 mb-sm-0">
+
+                      <button className="btn btn-outline-secondary btn-sm" onClick={() => updateQuantity(item.id, -1)}>
+                        -
+                      </button>
+
                       <span className="fw-bold">{item.quantity}</span>
-                      <button className="btn btn-outline-secondary btn-sm" onClick={() => updateQuantity(item.id, 1)}>+</button>
+                      <button className="btn btn-outline-secondary btn-sm" onClick={() => updateQuantity(item.id, 1)}>
+                        +
+                      </button>
+
                     </div>
 
-                    <button className="btn btn-outline-danger btn-sm" onClick={() => confirmRemove(item.id)}>
+                    <button className="btn btn-outline-danger btn-sm mt-2 mt-sm-0" 
+                      onClick={() => confirmRemove(item.id)}
+                    >
                       <i className="bi bi-trash"></i> Remove
                     </button>
                   </div>
@@ -284,9 +301,9 @@ function CartPage() {
 
       {/* Place Order Modal */}
       {showOrderForm && (
-        <div className="modal-backdrop d-flex justify-content-center align-items-center overflow-y-auto">
-          <div className="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-            <div className="modal-content shadow-lg rounded p-4">
+        <div className="modal-backdrop d-flex justify-content-center align-items-center">
+          <div className="modal-dialog modal-dialog-centered modal-dialog-scrollable w-100 mx-3">
+            <div className="modal-content shadow-lg rounded p-3 p-md-4">
               <h4 className="text-center text-primary mb-4">Place Order</h4>
 
               <div className="mb-3">
@@ -342,15 +359,15 @@ function CartPage() {
                 </select>
               </div>
 
-              <div className="d-flex justify-content-between">
+              <div className="d-flex justify-content-between flex-wrap gap-2">
                 <button
-                  className="btn btn-secondary"
+                  className="btn btn-secondary w-100 w-sm-auto"
                   onClick={() => setShowOrderForm(false)}
                 >
                   Cancel
                 </button>
                 <button
-                  className="btn btn-success"
+                  className="btn btn-success w-100 w-sm-auto"
                   onClick={submitOrder}
                   disabled={!userName || !address || !phoneNumber || !/^\+?\d{10,15}$/.test(phoneNumber)}
                 >

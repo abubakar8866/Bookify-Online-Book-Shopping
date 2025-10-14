@@ -90,26 +90,32 @@ export default function BooksPage() {
     for (let i = start; i < end; i++) {
       pages.push(
         <li key={i} className={`page-item ${page === i ? 'active' : ''}`}>
-          <button className="page-link" onClick={() => setPage(i)}>{i + 1}</button>
+          <button className="page-link px-3 py-2 rounded-5" onClick={() => setPage(i)}>{i + 1}</button>
         </li>
       );
     }
 
     return (
       <nav className="mt-4">
-        <ul className="pagination justify-content-center">
+        <ul className="pagination justify-content-center align-items-center flex-wrap gap-1"
+          style={{
+            flexWrap: "wrap",
+            rowGap: "0.5rem",
+            columnGap: "0.3rem",
+          }}
+        >
           <li className={`page-item ${page === 0 ? 'disabled' : ''}`}>
-            <button className="page-link" onClick={() => setPage(0)}>First</button>
+            <button className="page-link px-3 py-2 text-nowrap rounded-3" onClick={() => setPage(0)}>First</button>
           </li>
           <li className={`page-item ${page === 0 ? 'disabled' : ''}`}>
-            <button className="page-link" onClick={() => setPage(Math.max(0, page - 1))}>Previous</button>
+            <button className="page-link px-3 py-2 text-nowrap rounded-3" onClick={() => setPage(Math.max(0, page - 1))}>Previous</button>
           </li>
           {pages}
           <li className={`page-item ${page === totalPages - 1 ? 'disabled' : ''}`}>
-            <button className="page-link" onClick={() => setPage(Math.min(totalPages - 1, page + 1))}>Next</button>
+            <button className="page-link px-3 py-2 text-nowrap rounded-3" onClick={() => setPage(Math.min(totalPages - 1, page + 1))}>Next</button>
           </li>
           <li className={`page-item ${page === totalPages - 1 ? 'disabled' : ''}`}>
-            <button className="page-link" onClick={() => setPage(totalPages - 1)}>Last</button>
+            <button className="page-link px-3 py-2 text-nowrap rounded-3" onClick={() => setPage(totalPages - 1)}>Last</button>
           </li>
         </ul>
       </nav>
@@ -235,7 +241,7 @@ export default function BooksPage() {
                       style={{ width: '100%', height: '250px' }}
                     />
                   </div>
-                  <div className="col-md-6">
+                  <div className="col-md-6 mt-3">
                     <p><strong>Price:</strong> ₹{selectedBook.price}</p>
                     <p><strong>Quantity:</strong> {selectedBook.quantity}</p>
                     <p><strong>Author:</strong> {selectedBook.author?.name}</p>

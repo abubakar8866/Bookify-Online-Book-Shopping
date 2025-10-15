@@ -3,7 +3,8 @@ import {
   getAuthors,
   createAuthor,
   updateAuthor,
-  deleteAuthor
+  deleteAuthor,
+  searchByName
 } from "../api";
 import { useDropzone } from "react-dropzone";
 import AlertModal from '../components/AlertModal';
@@ -20,6 +21,7 @@ export default function AuthorsPage() {
   const [errors, setErrors] = useState({});
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
+  const [searchTerm, setSearchTerm] = useState("");
   const [alertConfig, setAlertConfig] = useState({
     show: false,
     title: "",
@@ -42,8 +44,15 @@ export default function AuthorsPage() {
   }
 
   useEffect(() => {
-    fetchAuthors(page);
-  }, [page]);
+    const delayDebounce = setTimeout(() => {
+      if (searchTerm.trim() === "") {
+        fetchAuthors(page);
+      } else {
+        handleSearch(searchTerm, page);
+      }
+    }, 400);
+    return () => clearTimeout(delayDebounce);
+  }, [searchTerm, page]);
 
   async function fetchAuthors(pageNumber = 0) {
     setLoading(true);
@@ -57,6 +66,26 @@ export default function AuthorsPage() {
       setLoading(false);
     }
   }
+
+  async function handleSearch(name, pageNumber = 0) {
+    setLoading(true);
+    try {
+      const res = await searchByName(name, pageNumber, pageSize);
+      setAuthors(res.data.content || []);
+      setTotalPages(res.data.totalPages);
+    } catch (err) {
+      if (err.response && err.response.status === 404) {
+        setAuthors([]);
+        setTotalPages(0);
+      } else {
+        console.error("Search error:", err);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+
 
   function handleOpenModal(author = null) {
     setErrors({});
@@ -233,17 +262,44 @@ export default function AuthorsPage() {
     accept: { "image/*": [] }
   });
 
+  function handleSearchInputChange(e) {
+    const value = e.target.value;
+    setSearchTerm(value);
+    setPage(0); 
+  }
+
+
   return (
     <div className="container mt-4 mb-0" style={{ maxWidth: "90vw" }}>
       {/* Header */}
-      <div className="d-flex justify-content-between mb-2 mt-2 align-items-center">
-        <h3 className="fw-bold text-primary">Authors</h3>
-        <div>
-          <button className="btn btn-primary shadow-sm rounded" onClick={() => handleOpenModal()}>
-            Add
-          </button>
-        </div>
+      <div className="d-flex justify-content-between mb-3 mt-2 align-items-center flex-wrap gap-2">
+        <h3 className="fw-bold text-primary mb-0">Authors</h3>
+
+        <div className="d-flex align-items-center gap-2">
+          <input
+            type="text"
+            placeholder="Search author by name..."
+            value={searchTerm}
+            onChange={handleSearchInputChange}
+            className="form-control shadow-sm"
+          />  
+          <button
+            className="btn btn-outline-primary shadow-sm rounded"
+            onClick={() => handleOpenModal()}
+          >
+          <i className="bi bi-plus" style={{fontSize:"19px"}}></i>
+        </button>        
+        </div>        
+
       </div>
+
+      {loading && (
+        <div className="text-center my-3">
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Loading...</span>
+          </div>
+        </div>
+      )}
 
       {/* Author List */}
       {authors.length === 0 ? (
@@ -252,7 +308,7 @@ export default function AuthorsPage() {
         <>
           <div className="row g-4">
             {authors.map(author => (
-              <div key={author.id} className="col-sm-12 col-md-4 mb-0">
+              <div key={author.id} className="col-sm-12 col-md-4 mb-2">
                 <div className="card h-100 shadow-sm">
                   <img
                     src={author.imageUrl}
@@ -286,8 +342,8 @@ export default function AuthorsPage() {
                   </div>
 
                   <div className="card-footer d-flex justify-content-between">
-                    <button className="btn btn-primary btn-sm" onClick={() => handleOpenModal(author)}>Edit</button>
-                    <button className="btn btn-danger btn-sm" onClick={() => handleDelete(author.id)}>Delete</button>
+                    <button className="btn btn-outline-primary btn-sm" onClick={() => handleOpenModal(author)}><i className="bi bi-pencil" style={{fontSize:"13px"}}></i></button>
+                    <button className="btn btn-outline-danger btn-sm" onClick={() => handleDelete(author.id)}><i className="bi bi-trash" style={{fontSize:"13px"}}></i></button>
                   </div>
                 </div>
               </div>
@@ -296,7 +352,7 @@ export default function AuthorsPage() {
 
           {/* Pagination (only show if more than one page exists) */}
           {totalPages > 1 && (
-            <nav className="mt-4">
+            <nav className="mt-2">
               <ul className="pagination justify-content-center align-items-center flex-wrap gap-1"
                 style={{
                   flexWrap: "wrap",
@@ -458,7 +514,7 @@ export default function AuthorsPage() {
                   )}
                 </div>
               </div>
-              <div className="modal-footer d-flex justify-content-center align-items-center flex-wrap gap-1">                
+              <div className="modal-footer d-flex justify-content-center align-items-center flex-wrap gap-1">
                 <button className="btn btn-primary w-100" onClick={handleSave}>{editingAuthor ? "Edit" : "Save"}</button>
                 <button className="btn btn-secondary w-100" onClick={() => setModalOpen(false)}>Cancel</button>
               </div>

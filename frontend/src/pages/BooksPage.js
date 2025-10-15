@@ -5,6 +5,7 @@ import {
   updateBook,
   deleteBook,
   getAuthorNames,
+  searchBooksByName
 } from "../api";
 import { useDropzone } from "react-dropzone";
 import '../../src/style/ReviewsStyle.css';
@@ -22,6 +23,7 @@ export default function AllBooksPage() {
   const [editing, setEditing] = useState(null);
   const [authors, setAuthors] = useState([]);
   const [selectedBook, setSelectedBook] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
   const [alert, setAlert] = useState({
     show: false,
     title: "",
@@ -43,9 +45,23 @@ export default function AllBooksPage() {
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
-    loadBooks(page);
+    const delayDebounce = setTimeout(() => {
+      if (searchTerm.trim() === "") {
+        loadBooks(page);
+      } else {
+        handleSearch(searchTerm, page);
+      }
+    }, 400);
+
+    return () => clearTimeout(delayDebounce);
+  }, [searchTerm, page]);
+
+  // Fetch authors once on mount
+  useEffect(() => {
     fetchAuthors();
-  }, [page]);
+  }, []);
+
+
 
   const loadBooks = async (pageNumber) => {
     try {
@@ -79,6 +95,24 @@ export default function AllBooksPage() {
       });
     }
   };
+
+  async function handleSearch(name, pageNumber = 0) {
+    setLoading(true);
+    try {
+      const res = await searchBooksByName(name, pageNumber, 8);
+      setBooks(res.data.content || []);
+      setTotalPages(res.data.totalPages);
+    } catch (err) {
+      if (err.response && err.response.status === 404) {
+        setBooks([]);
+        setTotalPages(0);
+      } else {
+        console.error("Search error:", err);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
 
   const handleOpenModal = (book = null) => {
     setErrors({});
@@ -253,16 +287,46 @@ export default function AllBooksPage() {
     onDrop,
   });
 
-  if (loading) return <p>Loading all books...</p>;
+  function handleSearchInputChange(e) {
+    const value = e.target.value;
+    setSearchTerm(value);
+    setPage(0);
+  }
+
+
 
   return (
     <div className="container mt-3 mb-2" style={{ maxWidth: "90vw" }}>
-      <div className="d-flex justify-content-between mb-3 align-items-center">
-        <h2 className="fw-bold text-primary">Books</h2>
-        <button className="btn btn-primary" onClick={() => handleOpenModal()}>
-          Add
-        </button>
+      <div className="d-flex justify-content-between mb-3 mt-2 align-items-center flex-wrap gap-2">
+        <h3 className="fw-bold text-primary mb-0">Books</h3>
+
+        <div className="d-flex align-items-center gap-2">
+          <input
+            type="text"
+            placeholder="Search book by name..."
+            value={searchTerm}
+            onChange={handleSearchInputChange}
+            className="form-control shadow-sm"
+          />
+          <button
+            className="btn btn-outline-primary shadow-sm rounded"
+            onClick={() => handleOpenModal()}
+          >
+            <i className="bi bi-plus" style={{ fontSize: "19px" }}></i>
+          </button>
+        </div>
+
       </div>
+
+      {
+        loading && (
+          <div className="text-center my-3">
+            <div className="spinner-border text-primary" role="status">
+              <span className="visually-hidden">Loading...</span>
+            </div>
+          </div>
+        )
+      }
 
       {books.length === 0 ? (
         <p className="text-center text-muted">No books found.</p>

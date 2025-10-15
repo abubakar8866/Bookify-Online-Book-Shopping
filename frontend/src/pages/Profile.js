@@ -145,7 +145,7 @@ function Profile() {
   if (loading) return <p>Loading profile...</p>;
 
   return (
-    <div className="container d-flex align-items-center justify-content-center" style={{ minHeight: "95vh" }}>
+    <div className="container d-flex align-items-center justify-content-center" style={{ minHeight: "90vh" }}>
       <div
         className="card shadow-lg p-4 rounded-4"
         style={{ maxWidth: "900px", margin: "auto" }}

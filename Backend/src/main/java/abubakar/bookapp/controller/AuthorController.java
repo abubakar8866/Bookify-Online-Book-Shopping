@@ -175,4 +175,13 @@ public class AuthorController {
                         .body("Author not found with ID: " + id));
     }
 
+    // InCaseSensitive Search Api
+    @GetMapping("/search")
+    public Page<Author> searchAuthors(
+            @RequestParam String name,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "3") int size) {
+        return repo.findByNameContainingIgnoreCase(name, PageRequest.of(page, size));
+    }
+
 }

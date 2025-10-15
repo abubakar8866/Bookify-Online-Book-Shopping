@@ -198,6 +198,7 @@ public class AuthController {
                         .toList());
     }
 
+    // Update Profile Api
     @PutMapping(value = "/profile/{id}", consumes = { "multipart/form-data" })
     public ResponseEntity<?> editProfile(
             @PathVariable Long id,

@@ -122,6 +122,11 @@ export async function getAuthorNames() {
   return res.data;
 }
 
+//Search
+export async function searchByName(name,page,size){
+  return API.get(`/authors/search`, { params: { name, page, size }});
+}
+
 /* -------------------- HELPERS -------------------- */
 
 // Convert DTO + file into FormData
@@ -164,11 +169,21 @@ export function deleteBook(id) {
   return API.delete(`/books/${id}`);
 }
 
+//Search
+export function searchBooksByName(name,page,size) {
+  return API.get(`/books/search`, { params: { name, page, size }});
+}
+
 /* -------------------- User BOOKS -------------------- */
 
 // Get paginated books for logged-in user
 export function getUserBooks(page = 0, size = 3) {
   return API.get(`/user/books?page=${page}&size=${size}`);
+}
+
+//Search
+export function searchUserBooksByName(name,page,size) {
+  return API.get(`/user/books/search`, { params: { name, page, size }});
 }
 
 /* -------------------- WISHLIST -------------------- */

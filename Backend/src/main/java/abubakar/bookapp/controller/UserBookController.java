@@ -56,4 +56,12 @@ public class UserBookController {
 
         return ResponseEntity.ok(booksPage);
     }
+
+    // InCaseSensitive Search Api
+    @GetMapping("/search")
+    public Page<Book> searchBooks(@RequestParam String name,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "8") int size) {
+        return bookRepository.findByNameContainingIgnoreCase(name, PageRequest.of(page, size));
+    }
 }

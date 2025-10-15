@@ -389,7 +389,7 @@ function OrderPage() {
                       if (orderMode === "UPI") {
                         setModal({
                           show: true,
-                          title: "Cancellation Not Allowed",
+                          title: "Not Allowed",
                           message: "You cannot cancel orders placed via UPI.",
                           type: "info",
                           onConfirm: null
@@ -493,7 +493,7 @@ function OrderPage() {
                                   if (order.orderMode === "UPI") {
                                     setModal({
                                       show: true,
-                                      title: "Cancellation Not Allowed",
+                                      title: "Not Allowed",
                                       message: "You cannot cancel products from a UPI order.",
                                       type: "info",
                                       onConfirm: null

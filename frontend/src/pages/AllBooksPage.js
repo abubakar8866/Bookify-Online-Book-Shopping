@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getUserBooks, addToWishlist, addToCart } from '../api';
+import { getUserBooks, addToWishlist, addToCart, searchUserBooksByName } from '../api';
 import '../../src/style/ReviewsStyle.css';
 import ReactStars from 'react-stars';
 import AlertModal from '../components/AlertModal';
@@ -9,17 +9,28 @@ import '../../src/style/All.css';
 
 export default function BooksPage() {
   const [books, setBooks] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [selectedBook, setSelectedBook] = useState(null); // for modal
+  const [searchTerm, setSearchTerm] = useState("");
   const [alertModal, setAlertModal] = useState({ show: false, title: "", message: "", type: "info" });
   const nav = useNavigate();
 
   useEffect(() => {
-    fetchBooks(page);
-  }, [page]);
+    const delayDebounce = setTimeout(() => {
+      if (searchTerm.trim() === "") {
+        fetchBooks(page);
+      } else {
+        handleSearch(searchTerm, page);
+      }
+    }, 400);
+
+    return () => clearTimeout(delayDebounce);
+  }, [searchTerm, page]);
 
   async function fetchBooks(page = 0) {
+    setLoading(true);
     try {
       const res = await getUserBooks(page, 8);
       const data = res.data;
@@ -33,6 +44,26 @@ export default function BooksPage() {
     } catch (e) {
       if (e.response?.status === 401) nav('/login');
       console.error("Failed to fetch books", e);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleSearch(name, pageNumber = 0) {
+    setLoading(true);
+    try {
+      const res = await searchUserBooksByName(name, pageNumber, 8);
+      setBooks(res.data.content || []);
+      setTotalPages(res.data.totalPages);
+    } catch (err) {
+      if (err.response && err.response.status === 404) {
+        setBooks([]);
+        setTotalPages(0);
+      } else {
+        console.error("Search error:", err);
+      }
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -78,6 +109,11 @@ export default function BooksPage() {
     }
   };
 
+  function handleSearchInputChange(e) {
+    const value = e.target.value;
+    setSearchTerm(value);
+    setPage(0);
+  }
 
   const renderPagination = () => {
     const pages = [];
@@ -123,8 +159,31 @@ export default function BooksPage() {
   };
 
   return (
-    <div className="container mt-4 mb-5" style={{maxWidth:"90vw"}}>
-      <h3 className="mb-4 text-center fw-bold text-primary">Books</h3>
+    <div className="container mt-4 mb-2" style={{ maxWidth: "90vw" }}>
+      <div className="d-flex justify-content-between mb-3 mt-2 align-items-center flex-wrap gap-2">
+        <h3 className="fw-bold text-primary mb-0">Books</h3>
+
+        <div className="d-flex align-items-center gap-2">
+          <input
+            type="text"
+            placeholder="Search book by name..."
+            value={searchTerm}
+            onChange={handleSearchInputChange}
+            className="form-control shadow-sm"
+          />
+        </div>
+
+      </div>
+
+      {
+        loading && (
+          <div className="text-center my-3">
+            <div className="spinner-border text-primary" role="status">
+              <span className="visually-hidden">Loading...</span>
+            </div>
+          </div>
+        )
+      }
 
       {books.length === 0 ? (
         <p className="text-center text-muted">No books found.</p>
@@ -195,7 +254,7 @@ export default function BooksPage() {
                         disabled={!b.quantity || b.quantity < 1}
                       >
                         <i className="bi bi-cart-plus "></i>
-                        
+
                       </button>
 
                       <button
@@ -219,7 +278,7 @@ export default function BooksPage() {
       {/* Modal for Book Details */}
       {selectedBook && (
         <div className="modal show d-flex justify-content-center align-items-center" tabIndex="-1" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
-          <div className="modal-dialog modal-lg" style={{paddingBottom:"20px",paddingTop:"20px"}} >
+          <div className="modal-dialog modal-lg" style={{ paddingBottom: "20px", paddingTop: "20px" }} >
             <div className="modal-content shadow-lg rounded-3">
               <div className="modal-header bg-primary text-white rounded-3">
                 <h5 className="modal-title">{selectedBook.name}</h5>

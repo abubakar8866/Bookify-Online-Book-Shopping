@@ -7,7 +7,7 @@ import '../../src/style/leftNav.css';
 function LeftNav() {
   const navigate = useNavigate();
   const role = getUserRole();
-  const [isOpen, setIsOpen] = useState(false); // sidebar open/close
+  const [isOpen, setIsOpen] = useState(false); 
 
   const handleLogout = () => {
     localStorage.clear();

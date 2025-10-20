@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 import com.razorpay.RazorpayClient;
 import com.razorpay.RazorpayException;
+import com.razorpay.Refund;
 import com.razorpay.Utils;
 
 import abubakar.bookapp.models.Order;
@@ -82,9 +83,20 @@ public class PaymentService {
         return savedOrder;
     }
 
-    //fetching RazerPayInfo from DB according to OrderID
+    // fetching RazerPayInfo from DB according to OrderID
     public RazorpayInfo getRazorpayInfoByOrderId(Long orderId) {
         return razorpayInfoRepository.findByOrderId(orderId);
+    }
+
+    // Refund method
+    public Refund refundPayment(String paymentId, double amountInINR) throws RazorpayException {
+        RazorpayClient client = new RazorpayClient(razorpayKeyId, razorpaySecret);
+
+        JSONObject refundRequest = new JSONObject();
+        refundRequest.put("amount", (int) Math.round(amountInINR * 100)); 
+        refundRequest.put("speed", "normal");
+
+        return client.payments.refund(paymentId, refundRequest);
     }
 
 }

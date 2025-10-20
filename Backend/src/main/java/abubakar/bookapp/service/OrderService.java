@@ -226,4 +226,8 @@ public class OrderService {
 
         return new OrderRangeStatsDTO(orderCount, orderTotal);
     }
+
+    public Optional<Order> getOrderById(Long orderId) {
+        return orderRepository.findById(orderId);
+    }
 }

@@ -26,6 +26,7 @@
   align-items: center;
   justify-content: center;
   z-index: 1050; /* above page content */
+  overflow-y: scroll;
 }
 
 /* Centered modal box */

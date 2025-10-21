@@ -1,6 +1,7 @@
 package abubakar.bookapp.service;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import abubakar.bookapp.models.Book;
 import abubakar.bookapp.models.Order;
@@ -229,5 +230,18 @@ public class OrderService {
 
     public Optional<Order> getOrderById(Long orderId) {
         return orderRepository.findById(orderId);
+    }
+
+    /**
+     * Safely save an existing order with updated items
+     * Used when adjusting quantities after return/replacement
+     */
+    @Transactional
+    public Order saveOrder(Order order) {
+        // Ensure updatedAt is refreshed
+        order.setUpdatedAt(java.time.LocalDateTime.now());
+
+        // Persist order with updated items (quantities etc.)
+        return orderRepository.save(order);
     }
 }

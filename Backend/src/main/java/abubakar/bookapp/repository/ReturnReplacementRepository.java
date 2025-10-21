@@ -11,4 +11,7 @@ public interface ReturnReplacementRepository extends JpaRepository<ReturnReplace
     List<ReturnReplacement> findByUserId(Long userId);
 
     List<ReturnReplacement> findByStatus(String status);
+    
+    // ✅ Prevent duplicate requests
+    boolean existsByOrderIdAndBookIdAndStatusIn(Long orderId, Long bookId, List<String> statuses);
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getOrdersByUserId, removeOrder, removeOrderItem, editOrdersByUserId, addReviewAndRating, fetchingRazorpayInfo } from '../api';
+import { getOrdersByUserId, removeOrder, removeOrderItem, editOrdersByUserId, addReviewAndRating, fetchingRazorpayInfo, createReturnReplacementRequest } from '../api';
 import { useNavigate } from 'react-router-dom';
 import '../../src/style/OrderTable.css';
 import '../../src/style/printWindow.css';
@@ -29,6 +29,23 @@ function OrderPage() {
     onConfirm: null
   });
   const [razorpayInfoMap, setRazorpayInfoMap] = useState({});
+  const [returnModal, setReturnModal] = useState({
+    visible: false,
+    order: null,
+    item: null
+  });
+
+  const [returnForm, setReturnForm] = useState({
+    customerName: '',
+    customerAddress: '',
+    customerPhone: '',
+    quantity: 1,
+    type: 'RETURN',
+    reason: '',
+    deliveryDate: '', // auto-set to 3 days later
+    images: [] // array of File objects
+  });
+
 
   const userId = localStorage.getItem('userId');
 
@@ -224,6 +241,75 @@ function OrderPage() {
 
   const groupedOrders = groupOrdersByTime(orders);
 
+  const openReturnModal = (order, item) => {
+    const userName = localStorage.getItem('userName') || '';
+    const userAddress = localStorage.getItem('userAddress') || '';
+    const userPhone = localStorage.getItem('userPhone') || '';
+    const today = new Date();
+    const threeDaysLater = new Date(today.setDate(today.getDate() + 3))
+      .toISOString().split("T")[0];
+
+    setReturnForm({
+      customerName: userName,
+      customerAddress: userAddress,
+      customerPhone: userPhone,
+      quantity: item.quantity,
+      type: 'RETURN',
+      reason: '',
+      deliveryDate: threeDaysLater,
+      images: []
+    });
+
+    setReturnModal({ visible: true, order, item });
+  };
+
+  const submitReturnRequest = async () => {
+    try {
+      const formDataToSend = new FormData();
+      formDataToSend.append("userId", localStorage.getItem('userId'));
+      formDataToSend.append("orderId", returnModal.order.id);
+      formDataToSend.append("bookId", returnModal.item.bookId);
+      formDataToSend.append("bookTitle", returnModal.item.bookName);
+      formDataToSend.append("bookAuthor", returnModal.item.authorName);
+      formDataToSend.append("quantity", returnForm.quantity);
+      formDataToSend.append("customerName", returnForm.customerName);
+      formDataToSend.append("customerAddress", returnForm.customerAddress);
+      formDataToSend.append("customerPhone", returnForm.customerPhone);
+      formDataToSend.append("type", returnForm.type);
+      formDataToSend.append("reason", returnForm.reason);
+      formDataToSend.append("deliveryDate", returnForm.deliveryDate);
+
+      if (returnModal.order.orderMode === 'UPI') {
+        formDataToSend.append("paymentId", returnModal.order.paymentId || '');
+        formDataToSend.append("refundedAmount", returnModal.item.subtotal || 0);
+      }
+
+      returnForm.images.forEach((file, idx) => formDataToSend.append(`images`, file));
+
+      await createReturnReplacementRequest(formDataToSend);
+
+      setModal({
+        show: true,
+        title: "Request Submitted",
+        message: "Your return/replacement request has been submitted successfully!",
+        type: "success",
+        onConfirm: null
+      });
+
+      setReturnModal({ visible: false, order: null, item: null });
+    } catch (err) {
+      console.error(err);
+      setModal({
+        show: true,
+        title: "Error",
+        message: "Failed to submit request. Please try again.",
+        type: "error",
+        onConfirm: null
+      });
+    }
+  };
+
+
   const handlePrint = (batch, time, batchIndex) => {
     const { userName, orderMode, orderStatus, address, phoneNumber, deliveryDate } = batch[0];
     const grandTotal = getBatchTotal(batch);
@@ -337,7 +423,7 @@ function OrderPage() {
       {orders.length === 0 ? (
         <p className="text-muted text-center">No orders found.</p>
       ) : (
-        <div style={{ maxHeight: '100vh', overflowY: 'auto', maxWidth:'90vw' }}>
+        <div style={{ maxHeight: '100vh', overflowY: 'auto', maxWidth: '90vw' }}>
           {Object.entries(groupedOrders).map(([time, batch], batchIndex) => {
             const { id, userName, orderMode, orderStatus, address, phoneNumber, deliveryDate } = batch[0];
 
@@ -549,6 +635,19 @@ function OrderPage() {
                                 <i className="bi bi-star"></i>
                               </button>
 
+                              <button
+                                className="btn btn-sm"
+                                disabled={order.orderStatus !== "Delivered" || item.quantity <= 0}
+                                onClick={() => openReturnModal(order, item)}
+                                style={{
+                                  cursor: (order.orderStatus !== "Delivered" || item.quantity <= 0) ? "not-allowed" : "pointer",
+                                  opacity: (order.orderStatus !== "Delivered" || item.quantity <= 0) ? 0.5 : 1
+                                }}
+                              >
+                                <i className="bi bi-arrow-counterclockwise"></i>
+                              </button>
+
+
                             </td>
                           </tr>
                         ));
@@ -648,7 +747,7 @@ function OrderPage() {
                   </div>
                 </form>
               </div>
-              <div className="modal-footer d-flex justify-content-center align-items-center flex-wrap gap-1">                
+              <div className="modal-footer d-flex justify-content-center align-items-center flex-wrap gap-1">
                 <button className="btn btn-primary w-100" onClick={handleSave}>Edit</button>
                 <button className="btn btn-secondary w-100" onClick={() => setEditingOrder(null)}>Cancel</button>
               </div>
@@ -660,7 +759,7 @@ function OrderPage() {
       {/* Review Modal */}
       {reviewModal.visible && (
         <div className="modal-backdrop-custom">
-          <div className="modal-dialog modal-md modal-custom">
+          <div className="modal-dialog modal-lg modal-custom">
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">Add Review & Rating</h5>
@@ -690,9 +789,81 @@ function OrderPage() {
                   {reviewErrors.review && <div className="text-danger">{reviewErrors.review}</div>}
                 </div>
               </div>
-              <div className="modal-footer d-flex justify-content-center align-items-center flex-wrap gap-1">                
+              <div className="modal-footer d-flex justify-content-center align-items-center flex-wrap gap-1">
                 <button className="btn btn-primary w-100" onClick={handleReviewSubmit}>Submit</button>
                 <button className="btn btn-secondary w-100" onClick={() => setReviewModal({ visible: false, orderId: null, bookId: null })}>Cancel</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Return/Replacement */}
+      {returnModal.visible && (
+        <div className="modal-backdrop-custom">
+          <div className="modal-dialog modal-lg modal-custom">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Return / Replace</h5>
+                <button type="button" style={{wordBreak:'break-all'}} className="btn-close" onClick={() => setReturnModal({ visible: false, order: null, item: null })}></button>
+              </div>
+              <div className="modal-body">
+                <form>
+                  <div className="mb-3">
+                    <label className="form-label">Name</label>
+                    <input type="text" className="form-control" value={returnForm.customerName}
+                      onChange={e => setReturnForm({ ...returnForm, customerName: e.target.value })} />
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label">Address</label>
+                    <input type="text" className="form-control" value={returnForm.customerAddress}
+                      onChange={e => setReturnForm({ ...returnForm, customerAddress: e.target.value })} />
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label">Phone</label>
+                    <input type="text" className="form-control" value={returnForm.customerPhone}
+                      onChange={e => setReturnForm({ ...returnForm, customerPhone: e.target.value })} />
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label">Quantity</label>
+                    <input type="number" className="form-control"
+                      min={1} max={returnModal.item.quantity}
+                      value={returnForm.quantity}
+                      onChange={e => setReturnForm({ ...returnForm, quantity: parseInt(e.target.value) })} />
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label">Type</label><br />
+                    <input type="radio" id="return" name="type" value="RETURN"
+                      checked={returnForm.type === 'RETURN'}
+                      onChange={e => setReturnForm({ ...returnForm, type: e.target.value })} />
+                    <label htmlFor="return" className="me-3">Return</label>
+                    <input type="radio" id="replacement" name="type" value="REPLACEMENT"
+                      checked={returnForm.type === 'REPLACEMENT'}
+                      onChange={e => setReturnForm({ ...returnForm, type: e.target.value })} />
+                    <label htmlFor="replacement">Replacement</label>
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label">Reason</label>
+                    <textarea className="form-control" rows={3}
+                      value={returnForm.reason}
+                      onChange={e => setReturnForm({ ...returnForm, reason: e.target.value })} />
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label">Images (optional)</label>
+                    <input type="file" multiple onChange={e =>
+                      setReturnForm({ ...returnForm, images: Array.from(e.target.files) })}
+                    />
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label">Delivery Date</label>
+                    <input type="date" className="form-control" value={returnForm.deliveryDate}
+                      onChange={e => setReturnForm({ ...returnForm, deliveryDate: e.target.value })} />
+                  </div>
+                </form>
+              </div>
+              <div className="modal-footer d-flex justify-content-center gap-1">
+                <button className="btn btn-primary w-100" onClick={submitReturnRequest}>Submit</button>
+                <button className="btn btn-secondary w-100" onClick={() => setReturnModal({ visible: false, order: null, item: null })}>Cancel</button>
               </div>
             </div>
           </div>

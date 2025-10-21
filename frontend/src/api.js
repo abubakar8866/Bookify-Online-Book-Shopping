@@ -343,4 +343,46 @@ export function getAllWishListItems() {
   return API.get(`/info/wishlists`);
 }
 
+/* -------------------- RETURN / REPLACEMENT -------------------- */
+
+// Create a new return/replacement request
+export function createReturnReplacementRequest(data) {
+  // data = { orderId, bookId, quantity, type } etc.
+  return API.post(`/returns/request`, data);
+}
+
+// Get all return/replacement requests for a specific user
+export function getUserReturnRequests(userId) {
+  return API.get(`/returns/user/${userId}`);
+}
+
+// Get a single return/replacement request by ID
+export function getReturnRequestById(requestId) {
+  return API.get(`/returns/${requestId}`);
+}
+
+/* -------------------- ADMIN RETURN / REPLACEMENT -------------------- */
+
+// Get all return/replacement requests (Admin)
+export function getAllReturnRequests() {
+  return API.get(`/admin/returns/all`);
+}
+
+// Get return/replacement requests filtered by status (Admin)
+export function getReturnRequestsByStatus(status) {
+  // status = "PENDING", "APPROVED", "REFUNDED", etc.
+  return API.get(`/admin/returns/status/${status}`);
+}
+
+// Update status of a return/replacement request (Admin)
+// status = "APPROVED", "REJECTED", "REPLACED", etc.
+export function updateReturnRequestStatus(requestId, status) {
+  return API.put(`/admin/returns/update-status/${requestId}`, null, { params: { status } });
+}
+
+// Refund a return request via Razorpay (Admin)
+export function refundReturnRequest(requestId) {
+  return API.put(`/admin/returns/refund/${requestId}`);
+}
+
 export default API;

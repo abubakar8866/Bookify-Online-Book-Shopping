@@ -13,7 +13,7 @@ import java.util.List;
 @Entity
 @Table(name = "return_replacement")
 public class ReturnReplacement {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -36,8 +36,17 @@ public class ReturnReplacement {
     @Column(nullable = false)
     private Integer quantity;
 
+    @Column(length = 150)
+    private String customerName;
+
+    @Column(length = 255)
+    private String customerAddress;
+
+    @Column(length = 15)
+    private String customerPhone;
+
     @Column(nullable = true)
-    private String paymentId;       // Razorpay payment ID
+    private String paymentId; // Razorpay payment ID
 
     @Column(nullable = true)
     private Double refundedAmount; // in INR
@@ -50,10 +59,7 @@ public class ReturnReplacement {
 
     // Optional multiple image URLs
     @ElementCollection
-    @CollectionTable(
-        name = "return_images",
-        joinColumns = @JoinColumn(name = "return_id")
-    )
+    @CollectionTable(name = "return_images", joinColumns = @JoinColumn(name = "return_id"))
     @Column(name = "image_url")
     private List<String> imageUrls;
 
@@ -65,7 +71,7 @@ public class ReturnReplacement {
     private LocalDateTime deliveryDate;
 
     @PrePersist
-    protected void onCreate(){
+    protected void onCreate() {
         this.requestedDate = LocalDateTime.now();
     }
 }

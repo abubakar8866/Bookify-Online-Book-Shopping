@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.razorpay.RazorpayException;
 import com.razorpay.Refund;
@@ -58,49 +59,48 @@ public class ReturnReplacementAdminController {
         return ResponseEntity.ok(updated);
     }
 
+    //Refund Money Api by RazerPay
     @PutMapping("/refund/{returnId}")
     public ResponseEntity<?> refundReturnRequest(@PathVariable Long returnId) {
-
-        // Fetch return request via service/repository
         ReturnReplacement rr = service.getRequestById(returnId)
-                .orElseThrow(() -> new RuntimeException("Return request not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Return request not found"));
 
-        
-        if ("REFUNDED".equals(rr.getStatus())) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("{\"error\":\"Request already refunded\"}");
+        // ✅ Extra safety check
+        if (!"APPROVED".equalsIgnoreCase(rr.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Return must be approved before refunding.");
         }
 
-        // Fetch Razorpay info for the order
+        if ("REFUNDED".equalsIgnoreCase(rr.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Request already refunded.");
+        }
+
         RazorpayInfo info = paymentService.getRazorpayInfoByOrderId(rr.getOrderId());
+        Order order = orderService.getOrderById(rr.getOrderId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
 
-        // Compute refund amount in paise
-        Order order = orderService.getOrderById(rr.getOrderId()).get();
-
-        // Find the book in order items
         OrderItem item = order.getItems().stream()
                 .filter(i -> i.getBookId().equals(rr.getBookId()))
                 .findFirst()
-                .orElseThrow(() -> new RuntimeException("Book not found in order"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Book not found in order"));
+
         double refundAmount = rr.getQuantity() * item.getUnitPrice();
 
         try {
-            // Trigger Razorpay refund
             Refund refund = paymentService.refundPayment(info.getRazorpayPaymentId(), refundAmount);
 
-            // Update return request
             rr.setStatus("REFUNDED");
             rr.setRefundedAmount(refundAmount);
             rr.setProcessedDate(LocalDateTime.now());
             rr.setPaymentId(info.getRazorpayPaymentId());
 
-            // Save via service/repository
             service.save(rr);
 
             return ResponseEntity.ok(refund.toString());
         } catch (RazorpayException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("{\"error\":\"Refund failed: " + e.getMessage() + "\"}");
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Refund failed: " + e.getMessage());
         }
     }
 

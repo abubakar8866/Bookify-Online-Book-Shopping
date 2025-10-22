@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
@@ -27,21 +28,22 @@ public class ReturnReplacementService {
     @Autowired
     private BookRepository bookRepository;
 
+    @Autowired
+    private FileStorageService fileStorageService;
+
     /**
      * Create a new return/replacement request
      */
     @Transactional
-    public ReturnReplacement createRequest(ReturnReplacement rr) {
+    public ReturnReplacement createRequest(ReturnReplacement rr, List<MultipartFile> images) {
         Order order = orderService.getOrderById(rr.getOrderId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
 
-        // Validate that book exists in the order
         OrderItem item = order.getItems().stream()
                 .filter(i -> i.getBookId().equals(rr.getBookId()))
                 .findFirst()
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Book not found in order"));
 
-        // ✅ Prevent duplicate request for same order & book (optional but recommended)
         boolean exists = repo.existsByOrderIdAndBookIdAndStatusIn(
                 rr.getOrderId(), rr.getBookId(), List.of("PENDING", "APPROVED"));
         if (exists) {
@@ -49,7 +51,6 @@ public class ReturnReplacementService {
                     "You already have an active return/replacement request for this book.");
         }
 
-        // ✅ Quantity validation
         if (rr.getQuantity() == null || rr.getQuantity() <= 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Quantity must be greater than zero");
         }
@@ -58,12 +59,25 @@ public class ReturnReplacementService {
                     "Quantity cannot exceed ordered quantity (" + item.getQuantity() + ")");
         }
 
-        // ✅ Auto-fill from order
         rr.setCustomerName(order.getUserName());
         rr.setCustomerAddress(order.getAddress());
         rr.setCustomerPhone(order.getPhoneNumber());
         rr.setStatus("PENDING");
         rr.setRequestedDate(LocalDateTime.now());
+
+        // Handle file uploads
+        if (images != null && !images.isEmpty()) {
+            List<String> imageUrls = images.stream().map(file -> {
+                try {
+                    return fileStorageService.saveReturnReplacementImage(file, rr.getUserId(), rr.getOrderId(),
+                            rr.getBookId());
+                } catch (Exception e) {
+                    throw new RuntimeException("Failed to upload image: " + file.getOriginalFilename(), e);
+                }
+            }).toList();
+
+            rr.setImageUrls(imageUrls);
+        }
 
         return repo.save(rr);
     }

@@ -46,6 +46,9 @@ function OrderPage() {
     images: [] // array of File objects
   });
 
+  const [previewImages, setPreviewImages] = useState([]);
+  const [isDragging, setIsDragging] = useState(false);
+  const [rerrors, rsetErrors] = useState({});
 
   const userId = localStorage.getItem('userId');
 
@@ -53,6 +56,16 @@ function OrderPage() {
     if (!userId) {
       navigate('/login');
       return;
+    }
+
+    // Autofill only when modal opens
+    if (returnModal.visible && returnModal.order) {
+      setReturnForm((prev) => ({
+        ...prev,
+        customerName: returnModal.order.userName || "",
+        customerAddress: returnModal.order.address || "",
+        customerPhone: returnModal.order.phoneNumber || "",
+      }));
     }
 
     getOrdersByUserId(userId)
@@ -76,7 +89,7 @@ function OrderPage() {
         });
       })
       .catch(err => console.error("Failed to load orders:", err));
-  }, [userId, navigate]);
+  }, [userId, navigate, returnModal.visible, returnModal.order?.id]);
 
 
   const openReviewModal = (orderId, bookId) => {
@@ -241,18 +254,48 @@ function OrderPage() {
 
   const groupedOrders = groupOrdersByTime(orders);
 
+  // Handle image input change
+  const handleFileChange = (e) => {
+    const files = Array.from(e.target.files);
+    const newPreviews = files.map((file) => URL.createObjectURL(file));
+    setPreviewImages((prev) => [...prev, ...newPreviews]);
+    setReturnForm((prev) => ({
+      ...prev,
+      images: [...(prev.images || []), ...files],
+    }));
+  };
+
+  // Handle drag & drop upload
+  const handleImageDrop = (e) => {
+    const files = Array.from(e.dataTransfer.files).filter((f) =>
+      f.type.startsWith("image/")
+    );
+    const newPreviews = files.map((file) => URL.createObjectURL(file));
+    setPreviewImages((prev) => [...prev, ...newPreviews]);
+    setReturnForm((prev) => ({
+      ...prev,
+      images: [...(prev.images || []), ...files],
+    }));
+  };
+
+  // Remove single image
+  const handleRemoveImage = (index) => {
+    setPreviewImages((prev) => prev.filter((_, i) => i !== index));
+    setReturnForm((prev) => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index),
+    }));
+  };
+
   const openReturnModal = (order, item) => {
-    const userName = localStorage.getItem('userName') || '';
-    const userAddress = localStorage.getItem('userAddress') || '';
-    const userPhone = localStorage.getItem('userPhone') || '';
     const today = new Date();
     const threeDaysLater = new Date(today.setDate(today.getDate() + 3))
       .toISOString().split("T")[0];
 
     setReturnForm({
-      customerName: userName,
-      customerAddress: userAddress,
-      customerPhone: userPhone,
+      customerName: '',
+      customerAddress: '',
+      customerPhone: '',
       quantity: item.quantity,
       type: 'RETURN',
       reason: '',
@@ -263,28 +306,63 @@ function OrderPage() {
     setReturnModal({ visible: true, order, item });
   };
 
+
+  const validateAndSubmit = () => {
+    const newErrors = {};
+
+    if (!returnForm.customerName || returnForm.customerName.length < 3 || returnForm.customerName.length > 20)
+      newErrors.customerName = "Name must be between 3 and 20 characters.";
+
+    if (!returnForm.customerAddress || returnForm.customerAddress.length < 3 || returnForm.customerAddress.length > 50)
+      newErrors.customerAddress = "Address must be between 3 and 50 characters.";
+
+    if (!/^\d{10}$/.test(returnForm.customerPhone))
+      newErrors.customerPhone = "Phone number must be exactly 10 digits.";
+
+    if (!returnForm.quantity || returnForm.quantity < 1)
+      newErrors.quantity = "Quantity is required.";
+
+    if (!returnForm.type)
+      newErrors.type = "Please select Return or Replacement.";
+
+    if (!returnForm.reason || returnForm.reason.length < 3 || returnForm.reason.length > 200)
+      newErrors.reason = "Reason must be between 3 and 200 characters.";
+
+    if (previewImages.length === 0)
+      newErrors.images = "At least one image is required.";
+
+    if (!returnForm.deliveryDate)
+      newErrors.deliveryDate = "Delivery date is required.";
+
+    rsetErrors(newErrors);
+
+    if (Object.keys(newErrors).length === 0) {
+      submitReturnRequest();
+    }
+  };
+
   const submitReturnRequest = async () => {
     try {
+      const requestData = {
+        userId: localStorage.getItem("userId"),
+        orderId: returnModal.order.id,
+        bookId: returnModal.item.bookId,
+        bookTitle: returnModal.item.bookName,
+        bookAuthor: returnModal.item.authorName,
+        quantity: returnForm.quantity,
+        customerName: returnForm.customerName,
+        customerAddress: returnForm.customerAddress,
+        customerPhone: returnForm.customerPhone,
+        type: returnForm.type,
+        reason: returnForm.reason,
+        deliveryDate: returnForm.deliveryDate,
+        paymentId: returnModal.order.orderMode === "UPI" ? returnModal.order.paymentId : "",
+        refundedAmount: returnModal.order.orderMode === "UPI" ? returnModal.item.subtotal : 0,
+      };
+
       const formDataToSend = new FormData();
-      formDataToSend.append("userId", localStorage.getItem('userId'));
-      formDataToSend.append("orderId", returnModal.order.id);
-      formDataToSend.append("bookId", returnModal.item.bookId);
-      formDataToSend.append("bookTitle", returnModal.item.bookName);
-      formDataToSend.append("bookAuthor", returnModal.item.authorName);
-      formDataToSend.append("quantity", returnForm.quantity);
-      formDataToSend.append("customerName", returnForm.customerName);
-      formDataToSend.append("customerAddress", returnForm.customerAddress);
-      formDataToSend.append("customerPhone", returnForm.customerPhone);
-      formDataToSend.append("type", returnForm.type);
-      formDataToSend.append("reason", returnForm.reason);
-      formDataToSend.append("deliveryDate", returnForm.deliveryDate);
-
-      if (returnModal.order.orderMode === 'UPI') {
-        formDataToSend.append("paymentId", returnModal.order.paymentId || '');
-        formDataToSend.append("refundedAmount", returnModal.item.subtotal || 0);
-      }
-
-      returnForm.images.forEach((file, idx) => formDataToSend.append(`images`, file));
+      formDataToSend.append("value", JSON.stringify(requestData));
+      returnForm.images.forEach((file) => formDataToSend.append("images", file));
 
       await createReturnReplacementRequest(formDataToSend);
 
@@ -293,9 +371,7 @@ function OrderPage() {
         title: "Request Submitted",
         message: "Your return/replacement request has been submitted successfully!",
         type: "success",
-        onConfirm: null
       });
-
       setReturnModal({ visible: false, order: null, item: null });
     } catch (err) {
       console.error(err);
@@ -304,7 +380,6 @@ function OrderPage() {
         title: "Error",
         message: "Failed to submit request. Please try again.",
         type: "error",
-        onConfirm: null
       });
     }
   };
@@ -439,6 +514,7 @@ function OrderPage() {
                   <strong>Phone:</strong> {phoneNumber} |{" "}
                   <strong>Delivery Date:</strong> {new Date(deliveryDate).toLocaleDateString()} |{" "}
 
+                  {/*Edit button */}
                   <button
                     className="btn btn-sm"
                     onClick={() => {
@@ -469,6 +545,7 @@ function OrderPage() {
                   </button>
                   |{" "}
 
+                  {/*Cancel button */}
                   <button
                     className="btn btn-sm"
                     onClick={() => {
@@ -509,6 +586,7 @@ function OrderPage() {
                     ></i>
                   </button> |{" "}
 
+                  {/*Print button */}
                   <button
                     className="btn btn-sm"
                     onClick={() => {
@@ -537,7 +615,6 @@ function OrderPage() {
                       }}
                     ></i>
                   </button>
-
 
                 </div>
 
@@ -573,6 +650,8 @@ function OrderPage() {
                             <td>{item.unitPrice}</td>
                             <td>{item.subtotal}</td>
                             <td>
+
+                              {/*Cancel product button */}
                               <button
                                 className="btn btn-sm"
                                 onClick={() => {
@@ -612,6 +691,7 @@ function OrderPage() {
                                 ></i>
                               </button>
 
+                              {/*Review/Rating button */}
                               <button
                                 className="btn btn-sm"
                                 onClick={() => {
@@ -635,6 +715,7 @@ function OrderPage() {
                                 <i className="bi bi-star"></i>
                               </button>
 
+                              {/*Return/Replacement button */}
                               <button
                                 className="btn btn-sm"
                                 disabled={order.orderStatus !== "Delivered" || item.quantity <= 0}
@@ -646,7 +727,6 @@ function OrderPage() {
                               >
                                 <i className="bi bi-arrow-counterclockwise"></i>
                               </button>
-
 
                             </td>
                           </tr>
@@ -692,6 +772,7 @@ function OrderPage() {
         </div>
       )}
 
+      {/* Editing Modal */}
       {editingOrder && (
         <div className="modal-backdrop-custom">
           <div className="modal-dialog modal-lg modal-custom">
@@ -804,66 +885,259 @@ function OrderPage() {
           <div className="modal-dialog modal-lg modal-custom">
             <div className="modal-content">
               <div className="modal-header">
-                <h5 className="modal-title">Return / Replace</h5>
-                <button type="button" style={{wordBreak:'break-all'}} className="btn-close" onClick={() => setReturnModal({ visible: false, order: null, item: null })}></button>
+                <h5 className="modal-title" style={{ wordBreak: 'break-word' }}>
+                  {returnForm.type === "RETURN" ? "Return of " : "Replacement of "}
+                  {returnModal.item.bookName}
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={() =>
+                    setReturnModal({ visible: false, order: null, item: null })
+                  }
+                ></button>
               </div>
+
               <div className="modal-body">
                 <form>
-                  <div className="mb-3">
+                  {/* NAME */}
+                  <div className="mb-3 position-relative">
                     <label className="form-label">Name</label>
-                    <input type="text" className="form-control" value={returnForm.customerName}
-                      onChange={e => setReturnForm({ ...returnForm, customerName: e.target.value })} />
+                    <div className="position-relative">
+                      <input
+                        type="text"
+                        className={`form-control ${rerrors.customerName ? "is-invalid-custom" : ""
+                          }`}
+                        value={returnForm.customerName}
+                        onChange={(e) =>
+                          setReturnForm({ ...returnForm, customerName: e.target.value })
+                        }
+                      />
+                      {rerrors.customerName && (
+                        <i className="bi bi-exclamation-circle text-danger position-absolute top-50 end-0 translate-middle-y me-2"></i>
+                      )}
+                    </div>
+                    {rerrors.customerName && (
+                      <div className="text-danger small mt-1">{rerrors.customerName}</div>
+                    )}
                   </div>
-                  <div className="mb-3">
+
+                  {/* ADDRESS */}
+                  <div className="mb-3 position-relative">
                     <label className="form-label">Address</label>
-                    <input type="text" className="form-control" value={returnForm.customerAddress}
-                      onChange={e => setReturnForm({ ...returnForm, customerAddress: e.target.value })} />
+                    <div className="position-relative">
+                      <input
+                        type="text"
+                        className={`form-control ${rerrors.customerAddress ? "is-invalid-custom" : ""
+                          }`}
+                        value={returnForm.customerAddress}
+                        onChange={(e) =>
+                          setReturnForm({ ...returnForm, customerAddress: e.target.value })
+                        }
+                      />
+                      {rerrors.customerAddress && (
+                        <i className="bi bi-exclamation-circle text-danger position-absolute top-50 end-0 translate-middle-y me-2"></i>
+                      )}
+                    </div>
+                    {rerrors.customerAddress && (
+                      <div className="text-danger small mt-1">{rerrors.customerAddress}</div>
+                    )}
                   </div>
-                  <div className="mb-3">
+
+                  {/* PHONE */}
+                  <div className="mb-3 position-relative">
                     <label className="form-label">Phone</label>
-                    <input type="text" className="form-control" value={returnForm.customerPhone}
-                      onChange={e => setReturnForm({ ...returnForm, customerPhone: e.target.value })} />
+                    <div className="position-relative">
+                      <input
+                        type="text"
+                        className={`form-control ${rerrors.customerPhone ? "is-invalid-custom" : ""
+                          }`}
+                        value={returnForm.customerPhone}
+                        onChange={(e) =>
+                          setReturnForm({ ...returnForm, customerPhone: e.target.value })
+                        }
+                      />
+                      {rerrors.customerPhone && (
+                        <i className="bi bi-exclamation-circle text-danger position-absolute top-50 end-0 translate-middle-y me-2"></i>
+                      )}
+                    </div>
+                    {rerrors.customerPhone && (
+                      <div className="text-danger small mt-1">{rerrors.customerPhone}</div>
+                    )}
                   </div>
-                  <div className="mb-3">
+
+                  {/* QUANTITY */}
+                  <div className="mb-3 position-relative">
                     <label className="form-label">Quantity</label>
-                    <input type="number" className="form-control"
-                      min={1} max={returnModal.item.quantity}
-                      value={returnForm.quantity}
-                      onChange={e => setReturnForm({ ...returnForm, quantity: parseInt(e.target.value) })} />
+                    <div className="position-relative">
+                      <input
+                        type="number"
+                        className={`form-control ${rerrors.quantity ? "is-invalid-custom" : ""
+                          }`}
+                        min={1}
+                        max={returnModal.item.quantity}
+                        value={returnForm.quantity}
+                        onChange={(e) =>
+                          setReturnForm({ ...returnForm, quantity: parseInt(e.target.value) })
+                        }
+                      />
+                      {rerrors.quantity && (
+                        <i className="bi bi-exclamation-circle text-danger position-absolute top-50 end-0 translate-middle-y me-2"></i>
+                      )}
+                    </div>
+                    {rerrors.quantity && (
+                      <div className="text-danger small mt-1">{rerrors.quantity}</div>
+                    )}
                   </div>
+
+                  {/* TYPE */}
                   <div className="mb-3">
                     <label className="form-label">Type</label><br />
-                    <input type="radio" id="return" name="type" value="RETURN"
-                      checked={returnForm.type === 'RETURN'}
-                      onChange={e => setReturnForm({ ...returnForm, type: e.target.value })} />
-                    <label htmlFor="return" className="me-3">Return</label>
-                    <input type="radio" id="replacement" name="type" value="REPLACEMENT"
-                      checked={returnForm.type === 'REPLACEMENT'}
-                      onChange={e => setReturnForm({ ...returnForm, type: e.target.value })} />
-                    <label htmlFor="replacement">Replacement</label>
-                  </div>
-                  <div className="mb-3">
-                    <label className="form-label">Reason</label>
-                    <textarea className="form-control" rows={3}
-                      value={returnForm.reason}
-                      onChange={e => setReturnForm({ ...returnForm, reason: e.target.value })} />
-                  </div>
-                  <div className="mb-3">
-                    <label className="form-label">Images (optional)</label>
-                    <input type="file" multiple onChange={e =>
-                      setReturnForm({ ...returnForm, images: Array.from(e.target.files) })}
+                    <input
+                      type="radio"
+                      id="return"
+                      name="type"
+                      value="RETURN"
+                      checked={returnForm.type === "RETURN"}
+                      onChange={(e) =>
+                        setReturnForm({ ...returnForm, type: e.target.value })
+                      }
                     />
+                    <label htmlFor="return" className="me-3">Return</label>
+
+                    <input
+                      type="radio"
+                      id="replacement"
+                      name="type"
+                      value="REPLACEMENT"
+                      checked={returnForm.type === "REPLACEMENT"}
+                      onChange={(e) =>
+                        setReturnForm({ ...returnForm, type: e.target.value })
+                      }
+                    />
+                    <label htmlFor="replacement">Replacement</label>
+
+                    {rerrors.type && (
+                      <div className="text-danger small mt-1">{rerrors.type}</div>
+                    )}
                   </div>
-                  <div className="mb-3">
+
+                  {/* REASON */}
+                  <div className="mb-3 position-relative">
+                    <label className="form-label">Reason</label>
+                    <div className="position-relative">
+                      <textarea
+                        className={`form-control ${rerrors.reason ? "is-invalid-custom" : ""
+                          }`}
+                        rows={3}
+                        value={returnForm.reason}
+                        onChange={(e) =>
+                          setReturnForm({ ...returnForm, reason: e.target.value })
+                        }
+                      />
+                      {rerrors.reason && (
+                        <i className="bi bi-exclamation-circle text-danger position-absolute top-0 end-0 me-2 mt-2"></i>
+                      )}
+                    </div>
+                    {rerrors.reason && (
+                      <div className="text-danger small mt-1">{rerrors.reason}</div>
+                    )}
+                  </div>
+
+                  {/* IMAGE UPLOAD */}
+                  <div
+                    className={`border rounded p-4 text-center mb-3 ${isDragging ? "bg-light border-primary" : "border-secondary"
+                      } ${rerrors.images ? "border-danger" : ""}`}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setIsDragging(true);
+                    }}
+                    onDragLeave={() => setIsDragging(false)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setIsDragging(false);
+                      handleImageDrop(e);
+                    }}
+                  >
+                    <p className="mb-2">
+                      <i className="bi bi-cloud-arrow-up fs-3 text-primary"></i>
+                    </p>
+                    <p className="text-muted mb-1">
+                      Drag & drop images here, or click below to browse
+                    </p>
+                    <input
+                      type="file"
+                      className="form-control mt-2"
+                      accept="image/*"
+                      multiple
+                      onChange={handleFileChange}
+                    />
+                    {rerrors.images && (
+                      <div className="text-danger small mt-2">{rerrors.images}</div>
+                    )}
+                  </div>
+
+                  {/* IMAGE PREVIEW */}
+                  {previewImages.length > 0 && (
+                    <div className="d-flex flex-wrap gap-3 mb-3 justify-content-center align-items-center">
+                      {previewImages.map((img, idx) => (
+                        <div
+                          key={idx}
+                          className="position-relative border rounded"
+                          style={{ width: "120px", height: "120px", overflow: "hidden" }}
+                        >
+                          <img
+                            src={img}
+                            alt={`preview-${idx}`}
+                            className="img-fluid w-100 h-100 object-fit-cover"
+                          />
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-danger position-absolute top-0 end-0 m-1"
+                            style={{ borderRadius: "50%" }}
+                            onClick={() => handleRemoveImage(idx)}
+                          >
+                            <i className="bi bi-x-lg"></i>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* DELIVERY DATE */}
+                  <div className="mb-3 position-relative">
                     <label className="form-label">Delivery Date</label>
-                    <input type="date" className="form-control" value={returnForm.deliveryDate}
-                      onChange={e => setReturnForm({ ...returnForm, deliveryDate: e.target.value })} />
+                    <div className="position-relative">
+                      <input
+                        type="date"
+                        className={`form-control ${rerrors.deliveryDate ? "is-invalid-custom" : ""
+                          }`}
+                        value={returnForm.deliveryDate}
+                        onChange={(e) =>
+                          setReturnForm({ ...returnForm, deliveryDate: e.target.value })
+                        }
+                      />
+                      {rerrors.deliveryDate && (
+                        <i className="bi bi-exclamation-circle text-danger position-absolute top-50 end-0 translate-middle-y me-2"></i>
+                      )}
+                    </div>
+                    {rerrors.deliveryDate && (
+                      <div className="text-danger small mt-1">{rerrors.deliveryDate}</div>
+                    )}
                   </div>
                 </form>
               </div>
+
               <div className="modal-footer d-flex justify-content-center gap-1">
-                <button className="btn btn-primary w-100" onClick={submitReturnRequest}>Submit</button>
-                <button className="btn btn-secondary w-100" onClick={() => setReturnModal({ visible: false, order: null, item: null })}>Cancel</button>
+                <button className="btn btn-primary w-100" onClick={validateAndSubmit}>
+                  Submit
+                </button>
+                <button
+                  className="btn btn-secondary w-100"
+                  onClick={() => setReturnModal({ visible: false, order: null, item: null })}
+                >
+                  Cancel
+                </button>
               </div>
             </div>
           </div>

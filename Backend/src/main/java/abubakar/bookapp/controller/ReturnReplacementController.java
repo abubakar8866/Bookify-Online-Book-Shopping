@@ -5,7 +5,10 @@ import abubakar.bookapp.service.ReturnReplacementService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.List;
 
@@ -20,16 +23,21 @@ public class ReturnReplacementController {
     /**
      * ✅ Create new return/replacement request (User side)
      */
-    @PostMapping("/request")
-    public ResponseEntity<ReturnReplacement> createRequest(@RequestBody ReturnReplacement rr) {
+    @PostMapping(value = "/request", consumes = { "multipart/form-data" })
+    public ResponseEntity<?> createRequest(
+            @RequestPart("value") String value,
+            @RequestPart(value = "images", required = false) List<MultipartFile> images) {
         try {
-            ReturnReplacement saved = service.createRequest(rr);
+            ObjectMapper mapper = new ObjectMapper();
+            ReturnReplacement rr = mapper.readValue(value, ReturnReplacement.class);
+
+            ReturnReplacement saved = service.createRequest(rr, images);
             return ResponseEntity.ok(saved);
+
         } catch (ResponseStatusException e) {
-            // Automatically handled by Spring, no manual JSON building
             throw e;
         } catch (Exception e) {
-            // Fallback for unexpected errors
+            e.printStackTrace();
             throw new ResponseStatusException(
                     org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR,
                     "Unexpected error occurred: " + e.getMessage());

@@ -346,9 +346,10 @@ export function getAllWishListItems() {
 /* -------------------- RETURN / REPLACEMENT -------------------- */
 
 // Create a new return/replacement request
-export function createReturnReplacementRequest(data) {
-  // data = { orderId, bookId, quantity, type } etc.
-  return API.post(`/returns/request`, data);
+export function createReturnReplacementRequest(formData) {
+  return API.post(`/returns/request`, formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
 }
 
 // Get all return/replacement requests for a specific user

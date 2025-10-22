@@ -52,9 +52,30 @@ public class FileStorageService {
         return buildFileUrl("uploads/profile-images/" + uniqueFileName);
     }
 
+    // ✅ NEW: Save return/replacement images (organized by userId, orderId, itemId)
+    public String saveReturnReplacementImage(MultipartFile file, Long userId, Long orderId, Long itemId)
+            throws IOException {
+        String rrDir = uploadDir + "/return-replacement-images";
+        ensureDirectoryExists(rrDir);
+
+        String originalName = file.getOriginalFilename();
+        String extension = "";
+        if (originalName != null && originalName.contains(".")) {
+            extension = originalName.substring(originalName.lastIndexOf("."));
+        }
+
+        String uniqueFileName = "user-" + userId + "_order-" + orderId + "_item-" + itemId + "_" + UUID.randomUUID()
+                + extension;
+        Path filePath = Paths.get(rrDir, uniqueFileName);
+        Files.write(filePath, file.getBytes());
+
+        return buildFileUrl("uploads/return-replacement-images/" + uniqueFileName);
+    }
+
     // Delete file by its URL or relative path
     public void delete(String fileUrl) {
-        if (fileUrl == null || fileUrl.isBlank()) return;
+        if (fileUrl == null || fileUrl.isBlank())
+            return;
 
         String fileName = fileUrl;
         if (fileUrl.contains("/uploads/")) {

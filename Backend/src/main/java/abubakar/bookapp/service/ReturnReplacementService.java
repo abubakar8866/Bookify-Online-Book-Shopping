@@ -64,6 +64,8 @@ public class ReturnReplacementService {
         rr.setCustomerPhone(order.getPhoneNumber());
         rr.setStatus("PENDING");
         rr.setRequestedDate(LocalDateTime.now());
+        rr.setProcessedDate(null);
+        rr.setDeliveryDate(rr.getDeliveryDate() != null ? rr.getDeliveryDate() : LocalDateTime.now().plusDays(3));
 
         // Handle file uploads
         if (images != null && !images.isEmpty()) {
@@ -132,6 +134,10 @@ public class ReturnReplacementService {
 
             // persist updated order items
             orderService.saveOrder(order);
+        }
+
+        if ("REPLACEMENT".equalsIgnoreCase(rr.getType()) && "APPROVED".equalsIgnoreCase(newStatus)) {
+            rr.setDeliveryDate(LocalDateTime.now().plusDays(3));
         }
 
         return repo.save(rr);

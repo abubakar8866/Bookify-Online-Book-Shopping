@@ -20,6 +20,9 @@ public class ReturnReplacementController {
     @Autowired
     private ReturnReplacementService service;
 
+    @Autowired
+    private ObjectMapper objectMapper;
+
     /**
      * ✅ Create new return/replacement request (User side)
      */
@@ -28,8 +31,7 @@ public class ReturnReplacementController {
             @RequestPart("value") String value,
             @RequestPart(value = "images", required = false) List<MultipartFile> images) {
         try {
-            ObjectMapper mapper = new ObjectMapper();
-            ReturnReplacement rr = mapper.readValue(value, ReturnReplacement.class);
+            ReturnReplacement rr = objectMapper.readValue(value, ReturnReplacement.class);
 
             ReturnReplacement saved = service.createRequest(rr, images);
             return ResponseEntity.ok(saved);

@@ -49,6 +49,8 @@ function OrderPage() {
   const [previewImages, setPreviewImages] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
   const [rerrors, rsetErrors] = useState({});
+  const MAX_FILE_SIZE = 50 * 1024 * 1024;  //50MB - converted into bytes
+  const ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png"];
 
   const userId = localStorage.getItem('userId');
 
@@ -257,25 +259,77 @@ function OrderPage() {
   // Handle image input change
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
-    const newPreviews = files.map((file) => URL.createObjectURL(file));
-    setPreviewImages((prev) => [...prev, ...newPreviews]);
-    setReturnForm((prev) => ({
-      ...prev,
-      images: [...(prev.images || []), ...files],
-    }));
+    const validFiles = [];
+    const errors = [];
+
+    files.forEach((file) => {
+      const fileType = file.type.toLowerCase();
+      const fileName = file.name.toLowerCase();
+
+      if (!ALLOWED_TYPES.includes(fileType) && !/\.(jpg|jpeg|png)$/i.test(fileName)) {
+        errors.push(`${file.name} is not a valid image file (allowed: JPG, JPEG, PNG).`);
+      } else if (file.size > MAX_FILE_SIZE) {
+        errors.push(`${file.name} exceeds 50MB limit.`);
+      } else {
+        validFiles.push(file);
+      }
+    });
+
+    if (errors.length > 0) {
+      // 🔴 show errors under dropzone
+      rsetErrors((prev) => ({ ...prev, images: errors.join(" ") }));
+    } else {
+      // ✅ clear previous error if all valid
+      rsetErrors((prev) => ({ ...prev, images: "" }));
+    }
+
+    if (validFiles.length > 0) {
+      const newPreviews = validFiles.map((file) => URL.createObjectURL(file));
+      setPreviewImages((prev) => [...prev, ...newPreviews]);
+      setReturnForm((prev) => ({
+        ...prev,
+        images: [...(prev.images || []), ...validFiles],
+      }));
+    }
+
+    e.target.value = ""; // reset input so reselecting works
   };
 
   // Handle drag & drop upload
   const handleImageDrop = (e) => {
-    const files = Array.from(e.dataTransfer.files).filter((f) =>
-      f.type.startsWith("image/")
-    );
-    const newPreviews = files.map((file) => URL.createObjectURL(file));
-    setPreviewImages((prev) => [...prev, ...newPreviews]);
-    setReturnForm((prev) => ({
-      ...prev,
-      images: [...(prev.images || []), ...files],
-    }));
+    e.preventDefault();
+
+    const files = Array.from(e.dataTransfer.files);
+    const validFiles = [];
+    const errors = [];
+
+    files.forEach((file) => {
+      const fileType = file.type.toLowerCase();
+      const fileName = file.name.toLowerCase();
+
+      if (!ALLOWED_TYPES.includes(fileType) && !/\.(jpg|jpeg|png)$/i.test(fileName)) {
+        errors.push(`${file.name} is not a valid image file (allowed: JPG, JPEG, PNG).`);
+      } else if (file.size > MAX_FILE_SIZE) {
+        errors.push(`${file.name} exceeds 50MB limit.`);
+      } else {
+        validFiles.push(file);
+      }
+    });
+
+    if (errors.length > 0) {
+      rsetErrors((prev) => ({ ...prev, images: errors.join(" ") }));
+    } else {
+      rsetErrors((prev) => ({ ...prev, images: "" }));
+    }
+
+    if (validFiles.length > 0) {
+      const newPreviews = validFiles.map((file) => URL.createObjectURL(file));
+      setPreviewImages((prev) => [...prev, ...newPreviews]);
+      setReturnForm((prev) => ({
+        ...prev,
+        images: [...(prev.images || []), ...validFiles],
+      }));
+    }
   };
 
   // Remove single image
@@ -355,7 +409,7 @@ function OrderPage() {
         customerPhone: returnForm.customerPhone,
         type: returnForm.type,
         reason: returnForm.reason,
-        deliveryDate: returnForm.deliveryDate,
+        deliveryDate: new Date(returnForm.deliveryDate).toISOString(),
         paymentId: returnModal.order.orderMode === "UPI" ? returnModal.order.paymentId : "",
         refundedAmount: returnModal.order.orderMode === "UPI" ? returnModal.item.subtotal : 0,
       };
@@ -365,6 +419,8 @@ function OrderPage() {
       returnForm.images.forEach((file) => formDataToSend.append("images", file));
 
       await createReturnReplacementRequest(formDataToSend);
+
+      rsetErrors((prev) => ({ ...prev, images: "" }));
 
       setModal({
         show: true,

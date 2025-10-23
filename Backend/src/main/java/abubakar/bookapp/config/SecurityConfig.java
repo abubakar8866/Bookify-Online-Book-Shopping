@@ -54,26 +54,25 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http
-            .csrf(csrf -> csrf.disable())
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/uploads/**").permitAll()
-                .requestMatchers("/api/auth/login","/api/auth/register","/api/auth/email/**").permitAll()
-                .requestMatchers("/api/auth/profile/**","/api/auth/books","/api/auth/authors").authenticated()
-                .requestMatchers("/api/books/**").hasRole("ADMIN")
-                .requestMatchers("/api/authors/**").hasRole("ADMIN")
-                .requestMatchers("/api/admin/orders/**").hasRole("ADMIN")
-                .requestMatchers("/api/info/**").hasRole("ADMIN")
-                .requestMatchers("/api/admin/returns/**").hasRole("ADMIN")
-                .requestMatchers("/api/user/books/**").hasRole("USER")
-                .requestMatchers("/api/payment/**").hasRole("USER")
-                .requestMatchers("/api/returns/**").hasRole("USER")
-                .requestMatchers("/api/wishlist/**").hasAuthority("ROLE_USER")
-                .requestMatchers("/api/cart/**").hasAuthority("ROLE_USER")
-                .requestMatchers("/api/order/**").hasAuthority("ROLE_USER")
-                .anyRequest().authenticated()
-            )
-            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
-            .build();
+                .csrf(csrf -> csrf.disable())
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/uploads/**").permitAll()
+                        .requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/email/**").permitAll()
+                        .requestMatchers("/api/auth/profile/**", "/api/auth/books", "/api/auth/authors").authenticated()
+                        .requestMatchers("/api/books/**").hasRole("ADMIN")
+                        .requestMatchers("/api/authors/**").hasRole("ADMIN")
+                        .requestMatchers("/api/admin/orders/**").hasRole("ADMIN")
+                        .requestMatchers("/api/info/**").hasRole("ADMIN")
+                        .requestMatchers("/api/admin/returns/**").hasRole("ADMIN")
+                        .requestMatchers("/api/user/books/**").hasRole("USER")
+                        .requestMatchers("/api/payment/**").hasRole("USER")
+                        .requestMatchers("/api/returns/**").hasRole("USER")
+                        .requestMatchers("/api/wishlist/**").hasAuthority("ROLE_USER")
+                        .requestMatchers("/api/cart/**").hasAuthority("ROLE_USER")
+                        .requestMatchers("/api/order/**").hasAuthority("ROLE_USER")
+                        .anyRequest().authenticated())
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                .build();
     }
 }

@@ -14,6 +14,7 @@ import AllBooks from "./pages/AllBooksPage";
 import Authors from "./pages/AuthorsPage";
 import AdminOrders from "./pages/AdminOrdersPage";
 import InformationPage from "./pages/InformationPage";
+import ReturnReplacementTable from "./pages/ReturnReplacementTable";
 
 // Protected Route Wrapper
 function ProtectedRoute({ children, role }) {
@@ -100,6 +101,14 @@ function App() {
               element={
                 <ProtectedRoute role="ROLE_USER">
                   <Order />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/returnReplacement"
+              element={
+                <ProtectedRoute role="ROLE_USER">
+                  <ReturnReplacementTable />
                 </ProtectedRoute>
               }
             />

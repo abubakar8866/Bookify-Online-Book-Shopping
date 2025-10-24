@@ -29,21 +29,10 @@ public class ReturnReplacementController {
     @PostMapping(value = "/request", consumes = { "multipart/form-data" })
     public ResponseEntity<?> createRequest(
             @RequestPart("value") String value,
-            @RequestPart(value = "images", required = false) List<MultipartFile> images) {
-        try {
-            ReturnReplacement rr = objectMapper.readValue(value, ReturnReplacement.class);
-
-            ReturnReplacement saved = service.createRequest(rr, images);
-            return ResponseEntity.ok(saved);
-
-        } catch (ResponseStatusException e) {
-            throw e;
-        } catch (Exception e) {
-            e.printStackTrace();
-            throw new ResponseStatusException(
-                    org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Unexpected error occurred: " + e.getMessage());
-        }
+            @RequestPart(value = "images", required = false) List<MultipartFile> images) throws Exception {
+        ReturnReplacement rr = objectMapper.readValue(value, ReturnReplacement.class);
+        ReturnReplacement saved = service.createRequest(rr, images);
+        return ResponseEntity.ok(saved);
     }
 
     /**

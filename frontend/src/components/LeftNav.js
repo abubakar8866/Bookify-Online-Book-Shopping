@@ -119,6 +119,11 @@ function LeftNav() {
                 <i className="bi bi-bag-check fs-5"></i> Orders
               </NavLink>
             </li>
+            <li className="nav-item">
+              <NavLink className={linkClass} to="/returnReplacement">
+                <i className="bi bi-arrow-counterclockwise fs-5"></i> ReturnReplacement
+              </NavLink>
+            </li>
           </SidebarWrapper>
 
           <SidebarWrapper title="Account">

@@ -157,7 +157,6 @@ function OrderPage() {
     });
   };
 
-
   const handleCancelProduct = (orderId, bookId) => {
     setModal({
       show: true,
@@ -175,8 +174,6 @@ function OrderPage() {
       }
     });
   };
-
-
 
   const handleEdit = (order) => {
     setEditingOrder(order);
@@ -410,8 +407,10 @@ function OrderPage() {
         type: returnForm.type,
         reason: returnForm.reason,
         deliveryDate: new Date(returnForm.deliveryDate).toISOString(),
-        paymentId: returnModal.order.orderMode === "UPI" ? returnModal.order.paymentId : "",
-        refundedAmount: returnModal.order.orderMode === "UPI" ? returnModal.item.subtotal : 0,
+        paymentId: returnModal.order.orderMode === "UPI" ? razorpayInfoMap[returnModal.order.id].razorpayPaymentId : "",
+        refundedAmount: parseFloat(
+          (parseFloat(returnModal.item.unitPrice) * returnForm.quantity).toFixed(2)
+        ),
       };
 
       const formDataToSend = new FormData();
@@ -431,13 +430,42 @@ function OrderPage() {
       setReturnModal({ visible: false, order: null, item: null });
     } catch (err) {
       console.error(err);
+
+      let errorMsg = "";
+
+      if (err.response) {
+        errorMsg = err.response.data.error;
+      } else {
+        errorMsg = "Failed to submit request. Please try again.";
+      }
+
       setModal({
         show: true,
         title: "Error",
-        message: "Failed to submit request. Please try again.",
+        message: errorMsg,
         type: "error",
       });
     }
+  };
+
+  const closeReturnModal = () => {
+    // Clean up preview URLs
+    previewImages.forEach((url) => URL.revokeObjectURL(url));
+
+    // Reset all form states
+    setPreviewImages([]);
+    setReturnForm({
+      customerName: "",
+      customerAddress: "",
+      customerPhone: "",
+      quantity: "",
+      type: "RETURN",
+      reason: "",
+      deliveryDate: "",
+      images: [],
+    });
+    rsetErrors({});
+    setReturnModal({ visible: false, order: null, item: null });
   };
 
 
@@ -948,9 +976,7 @@ function OrderPage() {
                 <button
                   type="button"
                   className="btn-close"
-                  onClick={() =>
-                    setReturnModal({ visible: false, order: null, item: null })
-                  }
+                  onClick={closeReturnModal}
                 ></button>
               </div>
 
@@ -1190,7 +1216,7 @@ function OrderPage() {
                 </button>
                 <button
                   className="btn btn-secondary w-100"
-                  onClick={() => setReturnModal({ visible: false, order: null, item: null })}
+                  onClick={closeReturnModal}
                 >
                   Cancel
                 </button>

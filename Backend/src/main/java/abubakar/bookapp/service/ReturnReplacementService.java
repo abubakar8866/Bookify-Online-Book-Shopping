@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -93,6 +94,99 @@ public class ReturnReplacementService {
     }
 
     /**
+     * Edit a return/replacement request (by id).
+     */
+    @Transactional
+    public ReturnReplacement editRequest(Long returnId, ReturnReplacement updates, List<MultipartFile> images) {
+        ReturnReplacement existing = repo.findById(returnId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Return/Replacement request not found"));
+
+        // Editable simple fields
+        if (updates.getCustomerName() != null)
+            existing.setCustomerName(updates.getCustomerName());
+        if (updates.getCustomerAddress() != null)
+            existing.setCustomerAddress(updates.getCustomerAddress());
+        if (updates.getCustomerPhone() != null)
+            existing.setCustomerPhone(updates.getCustomerPhone());
+        if (updates.getReason() != null)
+            existing.setReason(updates.getReason());
+        if (updates.getDeliveryDate() != null)
+            existing.setDeliveryDate(updates.getDeliveryDate());
+
+        // ---------------- Image handling ----------------    //
+        List<String> updatedImageUrls = updates.getImageUrls() != null ? updates.getImageUrls()
+                : existing.getImageUrls();
+
+        // Delete removed images
+        List<String> imagesToDelete = existing.getImageUrls().stream()
+                .filter(url -> !updatedImageUrls.contains(url))
+                .toList();
+
+        fileStorageService.deleteReturnReplacementImages(imagesToDelete);
+
+        existing.setImageUrls(updatedImageUrls);
+
+        // If new files uploaded, add them
+        if (images != null && !images.isEmpty()) {
+            try {
+                List<String> newUrls = fileStorageService.editReturnReplacementImages(
+                        existing.getUserId(),
+                        existing.getOrderId(),
+                        existing.getBookId(),
+                        List.of(), // we already deleted removed files, keep existing
+                        images);
+                existing.getImageUrls().addAll(newUrls);
+            } catch (IOException e) {
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                        "Failed to save new images: " + e.getMessage(), e);
+            }
+        }
+
+        return repo.save(existing);
+    }
+
+    /**
+     * Delete a return/replacement request by id.
+     */
+    @Transactional
+    public void deleteRequest(Long returnId) {
+        ReturnReplacement rr = repo.findById(returnId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Return/Replacement request not found"));
+
+        // 1) delete associated files (safe even if imageUrls is null/empty)
+        try {
+            fileStorageService.deleteReturnReplacementImages(rr.getImageUrls());
+        } catch (Exception e) {
+            // don't silently swallow — wrap into a ResponseStatusException so
+            // GlobalExceptionHandler formats it
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Failed to delete associated files: " + e.getMessage(), e);
+        }
+
+        // 2) if RETURN and APPROVED -> adjust order item quantity (increase)
+        if ("RETURN".equalsIgnoreCase(rr.getType()) && "APPROVED".equalsIgnoreCase(rr.getStatus())) {
+            Order order = orderService.getOrderById(rr.getOrderId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Associated order not found"));
+
+            order.getItems().stream()
+                    .filter(i -> i.getBookId().equals(rr.getBookId()))
+                    .findFirst()
+                    .ifPresent(orderItem -> {
+                        int updatedQty = orderItem.getQuantity() + (rr.getQuantity() != null ? rr.getQuantity() : 0);
+                        orderItem.setQuantity(updatedQty);
+                    });
+
+            // save adjusted order (persist the change in order items)
+            orderService.saveOrder(order);
+        }
+
+        // 3) finally delete the ReturnReplacement record
+        repo.delete(rr);
+    }
+
+    /**
      * Update status — handled by admin actions
      */
     @Transactional
@@ -107,18 +201,18 @@ public class ReturnReplacementService {
         rr.setStatus(newStatus);
         rr.setProcessedDate(LocalDateTime.now());
 
-        // ✅ When RETURN + APPROVED
+        // When RETURN + APPROVED
         if ("RETURN".equalsIgnoreCase(rr.getType())
                 && "APPROVED".equalsIgnoreCase(newStatus)
                 && !"APPROVED".equalsIgnoreCase(oldStatus)) {
 
-            // 1️⃣ Increase book stock
+            // Increase book stock
             bookRepository.findById(rr.getBookId()).ifPresent(book -> {
                 book.setQuantity(book.getQuantity() + rr.getQuantity());
                 bookRepository.save(book);
             });
 
-            // 2️⃣ Decrease OrderItem quantity
+            // Decrease OrderItem quantity
             Order order = orderService.getOrderById(rr.getOrderId())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
 

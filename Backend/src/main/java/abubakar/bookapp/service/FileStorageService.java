@@ -9,6 +9,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -93,6 +95,41 @@ public class FileStorageService {
             System.err.println("Failed to delete file: " + filePath);
             e.printStackTrace();
         }
+    }
+
+    /**
+     * Delete multiple return/replacement image URLs (safe: ignores null/blank
+     * entries).
+     */
+    public void deleteReturnReplacementImages(List<String> urls) {
+        if (urls == null || urls.isEmpty())
+            return;
+        for (String url : urls) {
+            if (url == null || url.isBlank())
+                continue;
+            delete(url); // reuse existing delete method which resolves path from url
+        }
+    }
+
+    /**
+     * Edit return/replacement images: delete the provided oldUrls, then save new
+     * files and return new URLs.
+     */
+    public List<String> editReturnReplacementImages(Long userId, Long orderId, Long itemId,List<String> oldUrls, List<MultipartFile> newFiles) throws IOException {
+        // 1) delete old urls (if any)
+        deleteReturnReplacementImages(oldUrls);
+
+        // 2) save new files and collect urls
+        List<String> result = new ArrayList<>();
+        if (newFiles == null || newFiles.isEmpty()) {
+            return result;
+        }
+
+        for (MultipartFile file : newFiles) {
+            String url = saveReturnReplacementImage(file, userId, orderId, itemId);
+            result.add(url);
+        }
+        return result;
     }
 
     private void ensureDirectoryExists(String path) {

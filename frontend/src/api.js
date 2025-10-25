@@ -362,6 +362,18 @@ export function getReturnRequestById(requestId) {
   return API.get(`/returns/${requestId}`);
 }
 
+// Edit an existing return/replacement request
+export function editReturnReplacementRequest(returnId, formData) {
+  return API.put(`/returns/${returnId}`, formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+}
+
+// Delete a return/replacement request by ID
+export function deleteReturnReplacementRequest(returnId) {
+  return API.delete(`/returns/${returnId}`);
+}
+
 /* -------------------- ADMIN RETURN / REPLACEMENT -------------------- */
 
 // Get all return/replacement requests (Admin)

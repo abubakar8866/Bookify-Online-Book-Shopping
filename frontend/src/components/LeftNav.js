@@ -74,6 +74,11 @@ function LeftNav() {
                 <i className="bi bi-info fs-5"></i> Info
               </NavLink>
             </li>
+            <li className="nav-item">
+              <NavLink className={linkClass} to="/adminReturnReplacementPage">
+                <i className="bi bi-arrow-counterclockwise fs-5"></i>Orders Issues
+              </NavLink>
+            </li>
           </SidebarWrapper>
 
           <SidebarWrapper title="Account">
@@ -119,9 +124,9 @@ function LeftNav() {
                 <i className="bi bi-bag-check fs-5"></i> Orders
               </NavLink>
             </li>
-            <li className="nav-item">
+            <li className="nav-item" style={{wordBreak:'break-word'}}>
               <NavLink className={linkClass} to="/returnReplacement">
-                <i className="bi bi-arrow-counterclockwise fs-5"></i> ReturnReplacement
+                <i className="bi bi-arrow-counterclockwise fs-5"></i> Orders Issues
               </NavLink>
             </li>
           </SidebarWrapper>
@@ -177,7 +182,7 @@ function LeftNav() {
       {/* Sidebar panel with slide animation */}
       <div
         className={`bg-light border-end vh-100 shadow-sm position-fixed top-0 start-0 sidebar-slide ${isOpen ? 'open' : 'closed'}`}
-        style={{ width: "220px", zIndex: 851, padding: "70px 10px 10px 10px" }}
+        style={{ width: "180px", zIndex: 851, padding: "70px 10px 10px 10px" }}
       >
         {renderSidebarContent()}
       </div>

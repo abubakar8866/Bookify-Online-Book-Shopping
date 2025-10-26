@@ -496,9 +496,7 @@ export default function AllBooksPage() {
               </div>
             </div>
           )}
-
-
-
+          
           {/* Pagination */}
           {totalPages > 1 && (
             <nav style={{ paddingTop: '10px' }}>

@@ -1,5 +1,6 @@
 package abubakar.bookapp.service;
 
+import abubakar.bookapp.models.Book;
 import abubakar.bookapp.models.Order;
 import abubakar.bookapp.models.OrderItem;
 import abubakar.bookapp.models.ReturnReplacement;
@@ -114,7 +115,7 @@ public class ReturnReplacementService {
         if (updates.getDeliveryDate() != null)
             existing.setDeliveryDate(updates.getDeliveryDate());
 
-        // ---------------- Image handling ----------------    //
+        // ---------------- Image handling ---------------- //
         List<String> updatedImageUrls = updates.getImageUrls() != null ? updates.getImageUrls()
                 : existing.getImageUrls();
 
@@ -198,43 +199,63 @@ public class ReturnReplacementService {
         String oldStatus = rr.getStatus();
         String newStatus = status.toUpperCase();
 
+        // Prevent duplicate processing
+        if ("APPROVED".equalsIgnoreCase(oldStatus) && "APPROVED".equalsIgnoreCase(newStatus)) {
+            return rr;
+        }
+
         rr.setStatus(newStatus);
         rr.setProcessedDate(LocalDateTime.now());
 
-        // When RETURN + APPROVED
-        if ("RETURN".equalsIgnoreCase(rr.getType())
-                && "APPROVED".equalsIgnoreCase(newStatus)
-                && !"APPROVED".equalsIgnoreCase(oldStatus)) {
-
-            // Increase book stock
-            bookRepository.findById(rr.getBookId()).ifPresent(book -> {
-                book.setQuantity(book.getQuantity() + rr.getQuantity());
-                bookRepository.save(book);
-            });
-
-            // Decrease OrderItem quantity
-            Order order = orderService.getOrderById(rr.getOrderId())
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
-
-            order.getItems().stream()
-                    .filter(i -> i.getBookId().equals(rr.getBookId()))
-                    .findFirst()
-                    .ifPresent(orderItem -> {
-                        int updatedQty = orderItem.getQuantity() - rr.getQuantity();
-                        if (updatedQty < 0)
-                            updatedQty = 0; // prevent negative qty
-                        orderItem.setQuantity(updatedQty);
-                    });
-
-            // persist updated order items
-            orderService.saveOrder(order);
+        // Only handle APPROVED cases
+        if (!"APPROVED".equalsIgnoreCase(newStatus)) {
+            return repo.save(rr);
         }
 
-        if ("REPLACEMENT".equalsIgnoreCase(rr.getType()) && "APPROVED".equalsIgnoreCase(newStatus)) {
+        Order order = orderService.getOrderById(rr.getOrderId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
+
+        // Apply item-level updates
+        updateOrderItemAndTotal(order, rr);
+
+        // Extra logic for REPLACEMENT
+        if ("REPLACEMENT".equalsIgnoreCase(rr.getType())) {
+            decreaseBookStock(rr.getBookId(), rr.getQuantity());
             rr.setDeliveryDate(LocalDateTime.now().plusDays(3));
         }
 
+        orderService.saveOrder(order);
         return repo.save(rr);
+    }
+
+    /**
+     * Updates order item quantity, subtotal, and recalculates total
+     */
+    private void updateOrderItemAndTotal(Order order, ReturnReplacement rr) {
+        order.getItems().stream()
+                .filter(i -> i.getBookId().equals(rr.getBookId()))
+                .findFirst()
+                .ifPresent(orderItem -> {
+                    int updatedQty = Math.max(orderItem.getQuantity() - rr.getQuantity(), 0);
+                    orderItem.setQuantity(updatedQty);
+                    orderItem.setSubtotal(orderItem.getUnitPrice() * updatedQty);
+                });
+
+        // Recalculate total safely
+        float newTotal = (float) order.getItems().stream()
+                .mapToDouble(OrderItem::getSubtotal)
+                .sum();
+        order.setTotal(newTotal);
+    }
+
+    /**
+     * Decrease book stock safely for replacement approval
+     */
+    private void decreaseBookStock(Long bookId, int qty) {
+        Book book = bookRepository.findById(bookId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Book not found"));
+        book.setQuantity(Math.max(book.getQuantity() - qty, 0));
+        bookRepository.save(book);
     }
 
     public List<ReturnReplacement> getAllRequests() {

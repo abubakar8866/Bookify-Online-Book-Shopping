@@ -342,13 +342,13 @@ const ReturnReplacementTable = () => {
           tabIndex="-1"
           style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
         >
-          <div className="modal-dialog modal-lg">
-            <div className="modal-content shadow-lg rounded-3">
+          <div className="modal-dialog modal-lg" role="document" style={{ paddingBottom: "20px", paddingTop: "20px" }}>
+            <div className="modal-content shadow-lg rounded-3" style={{maxWidth:'80vw'}}>
               <div className="modal-header bg-primary text-white">
-                <h5 className="modal-title">Edit Return / Replacement</h5>
+                <h5 className="modal-title w-40">Edit</h5>
                 <button
                   type="button"
-                  className="btn-close btn-close-white"
+                  className="btn-close btn-close-white w-40"
                   onClick={handleCloseModal}
                 ></button>
               </div>
@@ -447,7 +447,7 @@ const ReturnReplacementTable = () => {
                     </div>
                     {errors.images && <div className="text-danger small mt-1">{errors.images}</div>}
 
-                    <div className="d-flex flex-wrap mt-3 gap-2">
+                    <div className="d-flex flex-wrap justify-content-center align-items-center mt-3 gap-2">
                       {form.existingImages.map((url, i) => (
                         <div key={i} className="position-relative" style={{ width: "100px", height: "100px" }}>
                           <img src={url} alt="existing" className="rounded" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
@@ -478,9 +478,9 @@ const ReturnReplacementTable = () => {
                   </div>
 
                   {/* Footer */}
-                  <div className="modal-footer d-flex justify-content-between mt-3">
-                    <button type="submit" className="btn btn-success w-50">Update</button>
-                    <button type="button" className="btn btn-secondary w-50" onClick={handleCloseModal}>Cancel</button>
+                  <div className="modal-footer d-flex justify-content-center align-items-center flex-wrap gap-1 mt-3">
+                    <button type="submit" className="btn btn-success" style={{width:'80vw'}}>Update</button>
+                    <button type="button" className="btn btn-secondary" style={{width:'80vw'}} onClick={handleCloseModal}>Cancel</button>
                   </div>
                 </form>
               </div>

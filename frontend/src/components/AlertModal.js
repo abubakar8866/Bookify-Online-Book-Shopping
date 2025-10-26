@@ -17,7 +17,7 @@ function AlertModal({ show, onHide, title, message, type = "info", onConfirm }) 
   return (
     <Modal show={show} onHide={onHide} centered>
       <Modal.Header closeButton>
-        <Modal.Title className="d-flex align-items-center">
+        <Modal.Title className="d-flex align-items-center justify-centent-center flex-wrap" style={{wordBreak:'break-word'}}>
           {getIcon()} {title}
         </Modal.Title>
       </Modal.Header>

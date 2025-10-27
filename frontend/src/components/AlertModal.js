@@ -25,7 +25,7 @@ function AlertModal({ show, onHide, title, message, type = "info", onConfirm }) 
       <Modal.Footer>
         {onConfirm ? (
           <div className="d-flex justify-content-center align-items-center flex-wrap gap-1 w-100">
-            <Button variant="danger" className="w-100" onClick={() => { onConfirm(); onHide(); }}>Remove</Button>
+            <Button variant="danger" className="w-100" onClick={() => { onConfirm(); onHide(); }}>Yes</Button>
             <Button variant="secondary" className="w-100" onClick={onHide}>Close</Button>
           </div>
         ) : (

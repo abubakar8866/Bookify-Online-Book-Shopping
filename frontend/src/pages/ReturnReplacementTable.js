@@ -151,12 +151,20 @@ const ReturnReplacementTable = () => {
       fetchRequests(); // refresh table
     } catch (err) {
       console.error(err);
+
+      // Extract backend message (Spring returns in err.response.data.error or message)
+      const backendMessage =
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        "Failed to delete request.";
+
       setAlert({
         show: true,
         title: "Error",
-        message: "Failed to update request.",
+        message: backendMessage,
         type: "error",
       });
+
     }
   };
 
@@ -170,25 +178,35 @@ const ReturnReplacementTable = () => {
       onConfirm: async () => {
         try {
           await deleteReturnReplacementRequest(requestId);
+
           setAlert({
             show: true,
             title: "Deleted",
-            message: "Your Request is deleted successfully.",
-            type: "success"
+            message: "Your request was deleted successfully.",
+            type: "success",
           });
+
           fetchRequests(); // refresh table
         } catch (err) {
-          console.error(err);
+          console.error("Delete error:", err);
+
+          // Extract backend message (Spring returns in err.response.data.error or message)
+          const backendMessage =
+            err.response?.data?.error ||
+            err.response?.data?.message ||
+            "Failed to delete request.";
+
           setAlert({
             show: true,
             title: "Error",
-            message: "Failed to delete request.",
+            message: backendMessage,
             type: "error",
           });
         }
       },
     });
   };
+
 
 
   return (
@@ -262,18 +280,53 @@ const ReturnReplacementTable = () => {
               </div>
 
               <div className="d-flex justify-content-end mt-2">
-                <button
-                  className="btn btn-outline-primary btn-sm me-2"
-                  onClick={() => handleEditClick(req)}
-                >
-                  <i className="bi bi-pencil-square"></i>
-                </button>
-                <button
-                  className="btn btn-outline-danger btn-sm"
-                  onClick={() => handleDeleteRequest(req.id)}
-                >
-                  <i className="bi bi-trash"></i>
-                </button>
+                {(() => {
+                  const lockedStatuses = ["APPROVED", "RETURNED", "REPLACED", "REFUNDED"];
+                  const isLocked = lockedStatuses.includes(req.status?.toUpperCase());
+
+                  const handleLockedAction = (action) => {
+                    setAlert({
+                      show: true,
+                      title: "Action Not Allowed",
+                      message: `You cannot ${action} a request that is already ${req.status.toLowerCase()}.`,
+                      type: "warning",
+                    });
+                  };
+
+                  return (
+                    <>
+                      {/* -------- Edit Button -------- */}
+                      <button
+                        className={`btn btn-outline-primary btn-sm me-2 ${isLocked ? "opacity-50 cursor-not-allowed" : ""
+                          }`}
+                        onClick={() => {
+                          if (isLocked) {
+                            handleLockedAction("edit");
+                          } else {
+                            handleEditClick(req);
+                          }
+                        }}
+                      >
+                        <i className="bi bi-pencil-square"></i>
+                      </button>
+
+                      {/* -------- Delete Button -------- */}
+                      <button
+                        className={`btn btn-outline-danger btn-sm ${isLocked ? "opacity-50 cursor-not-allowed" : ""
+                          }`}
+                        onClick={() => {
+                          if (isLocked) {
+                            handleLockedAction("delete");
+                          } else {
+                            handleDeleteRequest(req.id);
+                          }
+                        }}
+                      >
+                        <i className="bi bi-trash"></i>
+                      </button>
+                    </>
+                  );
+                })()}
               </div>
 
               <hr className="mt-4 mb-3" />
@@ -322,10 +375,13 @@ const ReturnReplacementTable = () => {
                           : "—"}
                       </td>
                       <td>
-                        {req.refundedAmount
-                          ? `₹${req.refundedAmount.toFixed(2)}`
-                          : "—"}
+                        {req.type?.toUpperCase() === "REPLACEMENT"
+                          ? "₹0.00"
+                          : req.refundedAmount
+                            ? `₹${req.refundedAmount.toFixed(2)}`
+                            : "—"}
                       </td>
+
                     </tr>
                   </tbody>
                 </table>
@@ -343,7 +399,7 @@ const ReturnReplacementTable = () => {
           style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
         >
           <div className="modal-dialog modal-lg" role="document" style={{ paddingBottom: "20px", paddingTop: "20px" }}>
-            <div className="modal-content shadow-lg rounded-3" style={{maxWidth:'80vw'}}>
+            <div className="modal-content shadow-lg rounded-3" style={{ maxWidth: '80vw' }}>
               <div className="modal-header bg-primary text-white">
                 <h5 className="modal-title w-40">Edit</h5>
                 <button
@@ -479,8 +535,8 @@ const ReturnReplacementTable = () => {
 
                   {/* Footer */}
                   <div className="modal-footer d-flex justify-content-center align-items-center flex-wrap gap-1 mt-3">
-                    <button type="submit" className="btn btn-success" style={{width:'80vw'}}>Update</button>
-                    <button type="button" className="btn btn-secondary" style={{width:'80vw'}} onClick={handleCloseModal}>Cancel</button>
+                    <button type="submit" className="btn btn-success" style={{ width: '80vw' }}>Update</button>
+                    <button type="button" className="btn btn-secondary" style={{ width: '80vw' }} onClick={handleCloseModal}>Cancel</button>
                   </div>
                 </form>
               </div>
@@ -498,6 +554,7 @@ const ReturnReplacementTable = () => {
         type={alert.type}
         onConfirm={alert.onConfirm}
       />
+
     </div>
   );
 };

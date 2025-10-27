@@ -4,12 +4,11 @@ import {
     getReturnRequestsByStatus,
     updateReturnRequestStatus,
     refundReturnRequest,
-} from "../api"; // adjust path if needed
+} from "../api";
 import AlertModal from "../components/AlertModal";
 
 export default function AdminReturnReplacementPage() {
     const [requests, setRequests] = useState([]);
-    const [filtered, setFiltered] = useState([]);
     const [statusFilter, setStatusFilter] = useState("ALL");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -25,30 +24,26 @@ export default function AdminReturnReplacementPage() {
     const [imagesModal, setImagesModal] = useState({ show: false, images: [], idx: 0 });
 
     useEffect(() => {
-        fetchRequests();
-    }, []);
+        fetchRequests(statusFilter);
+    }, [statusFilter]);
 
-    useEffect(() => {
-        applyFilter();
-    }, [requests, statusFilter]);
-
-    async function fetchRequests() {
+    async function fetchRequests(status = statusFilter) {
         setLoading(true);
         setError(null);
         try {
-            const res = await getAllReturnRequests(); // expected to return array
-            setRequests(res.data || res);
+            let res;
+            if (status === "ALL") {
+                res = await getAllReturnRequests();
+            } else {
+                res = await getReturnRequestsByStatus(status);
+            }
+            setRequests((res.data || []).slice().reverse());
         } catch (e) {
             console.error(e);
             setError("Failed to load requests.");
         } finally {
             setLoading(false);
         }
-    }
-
-    function applyFilter() {
-        if (statusFilter === "ALL") setFiltered(requests);
-        else setFiltered(requests.filter((r) => r.status?.toUpperCase() === statusFilter));
     }
 
     function openAlert(title, message, type, onConfirm) {
@@ -115,6 +110,7 @@ export default function AdminReturnReplacementPage() {
             REJECTED: "danger",
             REFUNDED: "info",
             REPLACED: "primary",
+            RETURNED: "primary"
         };
         const cls = map[s] || "light";
         return <span className={`badge bg-${cls}`}>{s}</span>;
@@ -135,6 +131,7 @@ export default function AdminReturnReplacementPage() {
                         <option value="PENDING">Pending</option>
                         <option value="APPROVED">Approved</option>
                         <option value="REPLACED">Replaced</option>
+                        <option value="RETURNED">Returned</option>
                         <option value="REFUNDED">Refunded</option>
                         <option value="REJECTED">Rejected</option>
                     </select>
@@ -149,10 +146,10 @@ export default function AdminReturnReplacementPage() {
                 </div>
             ) : error ? (
                 <div className="alert alert-danger">{error}</div>
-            ) : filtered.length === 0 ? (
+            ) : requests.length === 0 ? (
                 <p className="text-muted text-center">No requests found.</p>
             ) : (
-                filtered.map((rr) => (
+                requests.map((rr) => (
                     <div key={rr.id} className="card mb-4 shadow-sm">
                         <div className="card-body p-3">
 
@@ -337,7 +334,7 @@ export default function AdminReturnReplacementPage() {
                 type={alert.type}
                 onConfirm={alert.onConfirm}
             />
-            
+
         </div>
     );
 }

@@ -46,25 +46,24 @@ public class ReturnReplacement {
     private String customerPhone;
 
     @Column(nullable = true)
-    private String paymentId; // Razorpay payment ID
+    private String paymentId;
 
     @Column(nullable = true)
-    private Double refundedAmount; // in INR
+    private Double refundedAmount;
 
     @Column(length = 20)
-    private String type; // "RETURN" or "REPLACEMENT"
+    private String type;
 
     @Column(columnDefinition = "TEXT")
     private String reason;
 
-    // Optional multiple image URLs
     @ElementCollection
     @CollectionTable(name = "return_images", joinColumns = @JoinColumn(name = "return_id"))
     @Column(name = "image_url")
     private List<String> imageUrls;
 
     @Column(length = 20)
-    private String status; // PENDING, APPROVED, REJECTED, REFUNDED, REPLACED
+    private String status;
 
     private LocalDateTime requestedDate;
     private LocalDateTime processedDate;

@@ -93,10 +93,21 @@ export default function AdminReturnReplacementPage() {
                 try {
                     await refundReturnRequest(rr.id);
                     await fetchRequests();
-                    setAlert({ show: true, title: "Refunded", message: "Refund processed successfully.", type: "success" });
+                    setAlert({ show: true, title: "Refunded", message: "Refund processed successfully done.", type: "success" });
                 } catch (e) {
                     console.error(e);
-                    setAlert({ show: true, title: "Error", message: "Refund failed.", type: "danger" });
+                    // Extract backend message (Spring returns in err.response.data.error or message)
+                    const backendMessage =
+                        e.response?.data?.error ||
+                        e.response?.data?.message ||
+                        "Refund failed.";
+
+                    setAlert({
+                        show: true,
+                        title: "Refund",
+                        message: backendMessage,
+                        type: "error",
+                    });
                 }
             }
         );

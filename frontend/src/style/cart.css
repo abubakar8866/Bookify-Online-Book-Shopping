@@ -1,14 +1,3 @@
-@media (max-width: 991px) {
-  .order-summary {
-    position: relative !important;
-    top: 0 !important;
-  }
-
-  .order-summary .card {
-    margin-bottom: 1rem;
-  }
-}
-
 @media (max-width: 576px) {
   .card {
     padding: 1rem !important;

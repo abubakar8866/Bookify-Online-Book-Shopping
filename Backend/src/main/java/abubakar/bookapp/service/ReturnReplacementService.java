@@ -45,7 +45,7 @@ public class ReturnReplacementService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Book not found in order"));
 
         boolean exists = repo.existsByOrderIdAndBookIdAndStatusIn(
-                rr.getOrderId(), rr.getBookId(), List.of("PENDING", "APPROVED"));
+                rr.getOrderId(), rr.getBookId(), List.of("PENDING"));
         if (exists) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "You already have an active return/replacement request for this book.");
@@ -101,15 +101,15 @@ public class ReturnReplacementService {
 
         String status = existing.getStatus() == null ? "" : existing.getStatus().toUpperCase();
 
-        //Prevent editing finalized/processed requests
-        List<String> protectedStatuses = List.of("APPROVED", "RETURNED", "REPLACED", "REFUNDED");
+        // Prevent editing finalized/processed requests
+        List<String> protectedStatuses = List.of("APPROVED", "RETURNED", "REPLACED", "REFUNDED","REJECTED");
         if (protectedStatuses.contains(status)) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
                     "Cannot edit a request that is already " + status.toLowerCase() + ".");
         }
 
-        //Editable simple fields
+        // Editable simple fields
         if (updates.getCustomerName() != null)
             existing.setCustomerName(updates.getCustomerName());
         if (updates.getCustomerAddress() != null)
@@ -121,11 +121,11 @@ public class ReturnReplacementService {
         if (updates.getDeliveryDate() != null)
             existing.setDeliveryDate(updates.getDeliveryDate());
 
-        //Image handling
+        // Image handling
         List<String> updatedImageUrls = updates.getImageUrls() != null ? updates.getImageUrls()
                 : existing.getImageUrls();
 
-        //Delete removed images
+        // Delete removed images
         List<String> imagesToDelete = existing.getImageUrls().stream()
                 .filter(url -> !updatedImageUrls.contains(url))
                 .toList();
@@ -134,7 +134,7 @@ public class ReturnReplacementService {
 
         existing.setImageUrls(updatedImageUrls);
 
-        //If new files uploaded, add them
+        // If new files uploaded, add them
         if (images != null && !images.isEmpty()) {
             try {
                 List<String> newUrls = fileStorageService.editReturnReplacementImages(
@@ -150,7 +150,7 @@ public class ReturnReplacementService {
             }
         }
 
-        //Save and return
+        // Save and return
         return repo.save(existing);
     }
 
@@ -165,7 +165,7 @@ public class ReturnReplacementService {
         String status = rr.getStatus() == null ? "" : rr.getStatus().toUpperCase();
 
         // Block deletion for finalized/processed requests
-        List<String> protectedStatuses = List.of("APPROVED", "RETURNED", "REPLACED", "REFUNDED");
+        List<String> protectedStatuses = List.of("APPROVED", "RETURNED", "REPLACED", "REFUNDED","REJECTED");
         if (protectedStatuses.contains(status)) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
@@ -202,100 +202,57 @@ public class ReturnReplacementService {
             return rr;
         }
 
-        // Example: only allow approving from PENDING (adjust if your flow differs)
+        // Only allow approving from PENDING
         if ("APPROVED".equals(newStatus) && !"PENDING".equals(oldStatus)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Can only approve requests that are in PENDING status.");
         }
 
-        // Set processed date for any non-pending status change
         rr.setProcessedDate(LocalDateTime.now());
         rr.setStatus(newStatus);
 
-        // If not approving, persist status change and return
         if (!"APPROVED".equals(newStatus)) {
             return repo.save(rr);
         }
 
-        // APPROVED path: apply business side-effects
+        // APPROVED path
         Order order = orderService.getOrderById(rr.getOrderId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
 
-        // If it's a RETURN:
-        if ("RETURN".equalsIgnoreCase(rr.getType())) {
-            // Validate quantity
-            Integer qty = rr.getQuantity() == null ? 0 : rr.getQuantity();
-            if (qty <= 0) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid return quantity");
-            }
-
-            // Decrease/adjust order item quantity & recalc totals
-            updateOrderItemAndTotalForReturn(order, rr);
-
-            // Restock book inventory (increase) -- only if business requires restocking on
-            // approval
-            restockBook(rr.getBookId(), qty); // method below
+        int qty = rr.getQuantity() == null ? 0 : rr.getQuantity();
+        if (qty <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid quantity");
         }
 
-        // If it's a REPLACEMENT:
+        // ---------------- COMMON LOGIC ----------------
+        adjustOrderForReturnOrReplacement(order, rr, qty);
+
+        // ---------------- TYPE-SPECIFIC LOGIC ----------------
         if ("REPLACEMENT".equalsIgnoreCase(rr.getType())) {
-            int qty = rr.getQuantity() == null ? 0 : rr.getQuantity();
-            if (qty <= 0) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid replacement quantity");
-            }
-
-            // Ensure sufficient stock before decreasing
-            Book book = bookRepository.findById(rr.getBookId())
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Book not found"));
-
-            if (book.getQuantity() < qty) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT, "Insufficient stock for replacement");
-            }
-
-            // Decrease stock as we will ship a replacement
-            book.setQuantity(book.getQuantity() - qty);
-            bookRepository.save(book);
-
-            // Set expected delivery for replacement
+            decreaseBookStock(rr.getBookId(), qty);
             rr.setDeliveryDate(LocalDateTime.now().plusDays(3));
         }
+        // RETURN: no stock restocking
 
-        // Persist order changes (if any)
+        // Save changes
         orderService.saveOrder(order);
-
-        // Persist the return/replacement request
         return repo.save(rr);
     }
 
-    // Helper for restocking a book (increase quantity)./
-    private void restockBook(Long bookId, int qty) {
-        if (bookId == null || qty <= 0)
-            return;
-        Book book = bookRepository.findById(bookId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Book not found"));
-        book.setQuantity(book.getQuantity() + qty);
-        bookRepository.save(book);
-    }
+    // ---------------- Helper Methods ----------------
 
     /**
-     * Updates order item quantity/subtotal and recalculates total specifically for
-     * RETURN approvals.
-     * This assumes that approving a RETURN should reduce delivered quantity and
-     * subtotal.
+     * Adjusts order item quantity, subtotal, and recalculates total
+     * for both RETURN and REPLACEMENT approval flows.
      */
-    private void updateOrderItemAndTotalForReturn(Order order, ReturnReplacement rr) {
-        int returnQty = rr.getQuantity() == null ? 0 : rr.getQuantity();
-
+    private void adjustOrderForReturnOrReplacement(Order order, ReturnReplacement rr, int qty) {
         order.getItems().stream()
                 .filter(i -> i.getBookId().equals(rr.getBookId()))
                 .findFirst()
                 .ifPresent(orderItem -> {
-                    int newQty = orderItem.getQuantity() - returnQty;
-                    if (newQty < 0) {
-                        // If return would make quantity negative, reject earlier; defensive clamp as
-                        // fallback
+                    int newQty = orderItem.getQuantity() - qty;
+                    if (newQty < 0)
                         newQty = 0;
-                    }
                     orderItem.setQuantity(newQty);
                     orderItem.setSubtotal(orderItem.getUnitPrice() * newQty);
                 });
@@ -304,6 +261,24 @@ public class ReturnReplacementService {
                 .mapToDouble(OrderItem::getSubtotal)
                 .sum();
         order.setTotal(newTotal);
+    }
+
+    /**
+     * Decreases the stock of a book (for REPLACEMENT cases).
+     */
+    private void decreaseBookStock(Long bookId, int qty) {
+        if (bookId == null || qty <= 0)
+            return;
+
+        Book book = bookRepository.findById(bookId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Book not found"));
+
+        if (book.getQuantity() < qty) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Insufficient stock for replacement");
+        }
+
+        book.setQuantity(book.getQuantity() - qty);
+        bookRepository.save(book);
     }
 
     public List<ReturnReplacement> getAllRequests() {

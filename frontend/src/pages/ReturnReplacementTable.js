@@ -281,7 +281,7 @@ const ReturnReplacementTable = () => {
 
               <div className="d-flex justify-content-end mt-2">
                 {(() => {
-                  const lockedStatuses = ["APPROVED", "RETURNED", "REPLACED", "REFUNDED"];
+                  const lockedStatuses = ["APPROVED", "RETURNED", "REPLACED", "REFUNDED" , "REJECTED"];
                   const isLocked = lockedStatuses.includes(req.status?.toUpperCase());
 
                   const handleLockedAction = (action) => {

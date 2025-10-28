@@ -93,10 +93,11 @@ public class PaymentService {
         RazorpayClient client = new RazorpayClient(razorpayKeyId, razorpaySecret);
 
         JSONObject refundRequest = new JSONObject();
-        refundRequest.put("amount", (int) Math.round(amountInINR * 100)); 
+        refundRequest.put("payment_id", paymentId);
+        refundRequest.put("amount", (int) amountInINR); 
         refundRequest.put("speed", "normal");
 
-        return client.payments.refund(paymentId, refundRequest);
+        return client.payments.refund(refundRequest);
     }
 
 }

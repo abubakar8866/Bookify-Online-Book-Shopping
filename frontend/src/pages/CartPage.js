@@ -222,16 +222,11 @@ function CartPage() {
   return (
     <div className="container mt-4 px-2 px-sm-3 px-md-4 overflow-x-hidden">
       <h2 className="mb-4 text-center text-primary fw-bold">Your Cart</h2>
-      <div className="d-flex flex-column flex-lg-row gap-4 align-items-stretch">
-
-        {/* Order Summary */}
-        <div className="order-summary"
-          style={{
-            minWidth: "100%",
-            maxWidth: "100%",
-          }}
-        >
-          <div className="card p-4 shadow-sm rounded"
+      <div className="row g-4 align-items-start">
+        {/* 🧾 Order Summary (right side on desktop, top on mobile) */}
+        <div className="col-12 col-lg-4">
+          <div
+            className="card p-4 shadow-sm rounded"
             style={{ position: "sticky", top: "20px" }}
           >
             <h5 className="fw-bold text-secondary">Order Summary</h5>
@@ -247,56 +242,53 @@ function CartPage() {
           </div>
         </div>
 
-        {/* Cart Items */}
-        <div className="flex-grow-1 p-2" style={{ maxHeight: '80vh', overflow: 'hidden auto' }}>
-          {cartItems.length === 0 ? (
-            <p className="text-muted text-center mt-4">No items in cart.</p>
-          ) : (
-            <div className="row g-3">
-              {cartItems.map(item => (
-                <div key={item.id} className="col-12 col-md-6 col-lg-12 ">
-                  <div className="card shadow-sm p-3 d-flex flex-column flex-sm-row align-items-center justify-content-between rounded">
-
-                    <div className="d-flex align-items-center w-100 w-sm-auto mb-3 mb-sm-0">
-                      <img
-                        src={item.book.imageUrl}
-                        alt={item.book.name}
-                        className="rounded me-3"
-                        style={{ width: '60px', height: '60px', objectFit: 'cover' }}
-                        onError={e => e.target.src = '/placeholder.jpg'}
-                      />
-                      <div>
-                        <h6 className="mb-1 fw-semibold">{item.book.name}</h6>
-                        <small className="text-muted">Price: ₹{item.book.price}</small><br />
-                        <small className="text-muted">Stock: {item.book.quantity}</small>
+        {/* 🛒 Cart Items (left side on desktop, bottom on mobile) */}
+        <div className="col-12 col-lg-8">
+          <div className="p-2" style={{ maxHeight: "80vh", overflowY: "auto" }}>
+            {cartItems.length === 0 ? (
+              <p className="text-muted text-center mt-4">No items in cart.</p>
+            ) : (
+              <div className="row g-3">
+                {cartItems.map(item => (
+                  <div key={item.id} className="col-12">
+                    <div className="card shadow-sm p-3 d-flex flex-column flex-sm-row align-items-center justify-content-between rounded">
+                      {/* Book Info */}
+                      <div className="d-flex align-items-center w-100 w-sm-auto mb-3 mb-sm-0">
+                        <img
+                          src={item.book.imageUrl}
+                          alt={item.book.name}
+                          className="rounded me-3"
+                          style={{ width: "60px", height: "60px", objectFit: "cover" }}
+                          onError={e => (e.target.src = "/placeholder.jpg")}
+                        />
+                        <div>
+                          <h6 className="mb-1 fw-semibold" style={{wordBreak:'break-all'}}>{item.book.name}</h6>
+                          <small className="text-muted">Price: ₹{item.book.price}</small><br />
+                          <small className="text-muted">Stock: {item.book.quantity}</small>
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="d-flex align-items-center gap-2 mb-2 mb-sm-0">
+                      {/* Quantity Controls */}
+                      <div className="d-flex align-items-center gap-2 mb-2 mb-sm-0">
+                        <button className="btn btn-outline-secondary btn-sm" onClick={() => updateQuantity(item.id, -1)}>-</button>
+                        <span className="fw-bold">{item.quantity}</span>
+                        <button className="btn btn-outline-secondary btn-sm" onClick={() => updateQuantity(item.id, 1)}>+</button>
+                      </div>
 
-                      <button className="btn btn-outline-secondary btn-sm" onClick={() => updateQuantity(item.id, -1)}>
-                        -
+                      {/* Remove Button */}
+                      <button
+                        className="btn btn-outline-danger btn-sm mt-2 mt-sm-0 mx-2"
+                        onClick={() => confirmRemove(item.id)}
+                      >
+                        <i className="bi bi-trash"></i>
                       </button>
-
-                      <span className="fw-bold">{item.quantity}</span>
-                      <button className="btn btn-outline-secondary btn-sm" onClick={() => updateQuantity(item.id, 1)}>
-                        +
-                      </button>
-
                     </div>
-
-                    <button className="btn btn-outline-danger btn-sm mt-2 mt-sm-0" 
-                      onClick={() => confirmRemove(item.id)}
-                    >
-                      <i className="bi bi-trash"></i> Remove
-                    </button>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
+          </div>
         </div>
-
       </div>
 
       {/* Place Order Modal */}

@@ -39,10 +39,22 @@ public class ReturnReplacementService {
         Order order = orderService.getOrderById(rr.getOrderId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
 
+        // Allow only delivered orders
+        if (!"Delivered".equalsIgnoreCase(order.getOrderStatus())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Return & Replacement is allowed only for delivered products.");
+        }
+
         OrderItem item = order.getItems().stream()
                 .filter(i -> i.getBookId().equals(rr.getBookId()))
                 .findFirst()
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Book not found in order"));
+
+        //Quantity check
+        if (item.getQuantity() <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Return & Replacement is allowed only for products whose quantity is greater than zero.");
+        }
 
         boolean exists = repo.existsByOrderIdAndBookIdAndStatusIn(
                 rr.getOrderId(), rr.getBookId(), List.of("PENDING"));
@@ -102,7 +114,7 @@ public class ReturnReplacementService {
         String status = existing.getStatus() == null ? "" : existing.getStatus().toUpperCase();
 
         // Prevent editing finalized/processed requests
-        List<String> protectedStatuses = List.of("APPROVED", "RETURNED", "REPLACED", "REFUNDED","REJECTED");
+        List<String> protectedStatuses = List.of("APPROVED", "RETURNED", "REPLACED", "REFUNDED", "REJECTED");
         if (protectedStatuses.contains(status)) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
@@ -165,7 +177,7 @@ public class ReturnReplacementService {
         String status = rr.getStatus() == null ? "" : rr.getStatus().toUpperCase();
 
         // Block deletion for finalized/processed requests
-        List<String> protectedStatuses = List.of("APPROVED", "RETURNED", "REPLACED", "REFUNDED","REJECTED");
+        List<String> protectedStatuses = List.of("APPROVED", "RETURNED", "REPLACED", "REFUNDED", "REJECTED");
         if (protectedStatuses.contains(status)) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,

@@ -76,4 +76,13 @@ public class OrderController {
                 orderService.addReviewAndRating(orderId, bookId, dto.getReview(), dto.getRating()));
     }
 
+    //Print order (only for delivered orders)
+    @GetMapping("/{orderId}/print/{orderStatus}")
+    public ResponseEntity<Order> printOrder(
+            @PathVariable Long orderId,
+            @PathVariable String orderStatus) {
+        Order printedOrder = orderService.printOrder(orderId, orderStatus);
+        return ResponseEntity.ok(printedOrder);
+    }
+
 }

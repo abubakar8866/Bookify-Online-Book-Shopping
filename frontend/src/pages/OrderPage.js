@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getOrdersByUserId, removeOrder, removeOrderItem, editOrdersByUserId, addReviewAndRating, fetchingRazorpayInfo, createReturnReplacementRequest } from '../api';
+import { getOrdersByUserId, removeOrder, removeOrderItem, editOrdersByUserId, addReviewAndRating, fetchingRazorpayInfo, createReturnReplacementRequest, printOrder } from '../api';
 import { useNavigate } from 'react-router-dom';
 import '../../src/style/OrderTable.css';
 import '../../src/style/printWindow.css';
@@ -93,6 +93,27 @@ function OrderPage() {
       .catch(err => console.error("Failed to load orders:", err));
   }, [userId, navigate, returnModal.visible, returnModal.order?.id]);
 
+  const handleError = (error, fallbackMessage = "Something went wrong. Please try again.") => {
+    let message = fallbackMessage;
+
+    if (error.response && error.response.data) {
+      if (typeof error.response.data === "string") {
+        message = error.response.data;
+      } else if (error.response.data.message) {
+        message = error.response.data.message;
+      }
+    } else if (error.message) {
+      message = error.message;
+    }
+
+    setModal({
+      show: true,
+      title: "Error",
+      message,
+      type: "danger",
+      onConfirm: null
+    });
+  };
 
   const openReviewModal = (orderId, bookId) => {
     setReviewModal({ visible: true, orderId, bookId });
@@ -131,15 +152,7 @@ function OrderPage() {
           onConfirm: null
         });
       })
-      .catch(() => {
-        setModal({
-          show: true,
-          title: "Error",
-          message: "Failed to submit review. Please try again.",
-          type: "error",
-          onConfirm: null
-        });
-      });
+      .catch(err => handleError(err, "Failed to submit review and rating."));
 
   };
 
@@ -152,7 +165,7 @@ function OrderPage() {
       onConfirm: () => {
         removeOrder(orderId)
           .then(() => setOrders(orders.filter(o => o.id !== orderId)))
-          .catch(err => console.error("Failed to cancel order:", err));
+          .catch(err => handleError(err, "Failed to cancel the order."));
       }
     });
   };
@@ -170,7 +183,7 @@ function OrderPage() {
             const sorted = res.data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
             setOrders(sorted);
           })
-          .catch(err => console.error("Failed to remove product from order:", err));
+          .catch(err => handleError(err, "Failed to delete order product."));
       }
     });
   };
@@ -227,14 +240,8 @@ function OrderPage() {
           onConfirm: null
         });
       })
-      .catch(() => {
-        setModal({
-          show: true,
-          title: "Error",
-          message: "Failed to update order. Please try again.",
-          type: "error",
-          onConfirm: null
-        });
+      .catch(err => {
+        handleError(err, "Failed to update the order.");
       });
   };
 
@@ -429,22 +436,7 @@ function OrderPage() {
       });
       setReturnModal({ visible: false, order: null, item: null });
     } catch (err) {
-      console.error(err);
-
-      let errorMsg = "";
-
-      if (err.response) {
-        errorMsg = err.response.data.error;
-      } else {
-        errorMsg = "Failed to submit request. Please try again.";
-      }
-
-      setModal({
-        show: true,
-        title: "Error",
-        message: errorMsg,
-        type: "error",
-      });
+      handleError(err, "Failed to submit your request.");
     }
   };
 
@@ -468,112 +460,125 @@ function OrderPage() {
     setReturnModal({ visible: false, order: null, item: null });
   };
 
+  const handlePrint = async (batch, time, batchIndex) => {
+    const { userName, orderMode, orderStatus, address, phoneNumber, deliveryDate, id } = batch[0];
 
-  const handlePrint = (batch, time, batchIndex) => {
-    const { userName, orderMode, orderStatus, address, phoneNumber, deliveryDate } = batch[0];
-    const grandTotal = getBatchTotal(batch);
-    const subtotal = grandTotal / 1.05;
-    const gstAmount = grandTotal - subtotal;
+    try {
+      // ✅ Call backend validation
+      await printOrder(id, orderStatus);
 
-    const year = new Date().getFullYear();
-    const invoiceNumber = `INV-${year}-${String(batchIndex + 1).padStart(4, "0")}`;
+      // ✅ If backend allows, continue local print
+      const grandTotal = getBatchTotal(batch);
+      const subtotal = grandTotal / 1.05;
+      const gstAmount = grandTotal - subtotal;
 
-    const printContent = `
-    <div id="printableArea" style="font-family: Arial, sans-serif; padding: 20px;">
-      <h2 style="text-align: center;">Invoice - 📚Bookify</h2>
-      <p style="text-align: center; font-size: 20px; color: gray;">${invoiceNumber}</p>
-      <div style="margin-top: 10px;">
-        <p><strong>Name:</strong> ${userName}</p>
-        <p><strong>Address:</strong> ${address}</p>
-        <p><strong>Phone:</strong> ${phoneNumber}</p>
-        <p><strong>Order Mode:</strong> ${orderMode}</p>
-        <p><strong>Status:</strong> ${orderStatus}</p>
-        <p><strong>Delivery Date:</strong> ${new Date(deliveryDate).toLocaleDateString()}</p>
-        <p><strong>Placed At:</strong> ${time}</p>
-        <p><strong>Generated At:</strong> ${new Date().toLocaleString()}</p>
-      </div>
+      const year = new Date().getFullYear();
+      const invoiceNumber = `INV-${year}-${String(batchIndex + 1).padStart(4, "0")}`;
 
-      <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
-        <thead>
-          <tr>
-            <th style="border:1px solid #ddd; padding:8px;">Sr No</th>
-            <th style="border:1px solid #ddd; padding:8px;">Book</th>
-            <th style="border:1px solid #ddd; padding:8px;">Author</th>
-            <th style="border:1px solid #ddd; padding:8px;">Qty</th>
-            <th style="border:1px solid #ddd; padding:8px;">Price</th>
-            <th style="border:1px solid #ddd; padding:8px;">Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${batch.flatMap((order, oi) =>
-      order.items.map((item, ii) => `
-              <tr>
-                <td style="border:1px solid #ddd; padding:8px;">${ii + 1}</td>
-                <td style="border:1px solid #ddd; padding:8px;">${item.bookName}</td>
-                <td style="border:1px solid #ddd; padding:8px;">${item.authorName}</td>
-                <td style="border:1px solid #ddd; padding:8px;">${item.quantity}</td>
-                <td style="border:1px solid #ddd; padding:8px;">₹${item.unitPrice.toFixed(2)}</td>
-                <td style="border:1px solid #ddd; padding:8px;">₹${item.subtotal.toFixed(2)}</td>
-              </tr>
-            `)
-    ).join('')}
-        </tbody>
-      </table>
+      const printContent = `
+      <div id="printableArea" style="font-family: Arial, sans-serif; padding: 20px;">
+        <h2 style="text-align: center;">Invoice - 📚Bookify</h2>
+        <p style="text-align: center; font-size: 20px; color: gray;">${invoiceNumber}</p>
+        <div style="margin-top: 10px;">
+          <p><strong>Name:</strong> ${userName}</p>
+          <p><strong>Address:</strong> ${address}</p>
+          <p><strong>Phone:</strong> ${phoneNumber}</p>
+          <p><strong>Order Mode:</strong> ${orderMode}</p>
+          <p><strong>Status:</strong> ${orderStatus}</p>
+          <p><strong>Delivery Date:</strong> ${new Date(deliveryDate).toLocaleDateString()}</p>
+          <p><strong>Placed At:</strong> ${time}</p>
+          <p><strong>Generated At:</strong> ${new Date().toLocaleString()}</p>
+        </div>
 
-      ${batch.some(order => order.orderMode === "UPI" && razorpayInfoMap[order.id])
-        ? batch.map(order => {
-          if (order.orderMode === "UPI" && razorpayInfoMap[order.id]) {
-            const info = razorpayInfoMap[order.id];
-            return `
-                  <div style="margin-top: 10px; background: #f8f9fa; padding: 10px; border: 1px solid #ddd; font-size: 0.9rem;">
-                    <strong>Razorpay Details:</strong><br/>
-                    Order ID: ${info.razorpayOrderId}<br/>
-                    Payment ID: ${info.razorpayPaymentId}<br/>
-                    Signature: ${info.razorpaySignature}
-                  </div>
-                `;
-          }
-          return '';
-        }).join('')
-        : ''
-      }
+        <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+          <thead>
+            <tr>
+              <th style="border:1px solid #ddd; padding:8px;">Sr No</th>
+              <th style="border:1px solid #ddd; padding:8px;">Book</th>
+              <th style="border:1px solid #ddd; padding:8px;">Author</th>
+              <th style="border:1px solid #ddd; padding:8px;">Qty</th>
+              <th style="border:1px solid #ddd; padding:8px;">Price</th>
+              <th style="border:1px solid #ddd; padding:8px;">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${batch
+          .flatMap((order, oi) =>
+            order.items.map(
+              (item, ii) => `
+                <tr>
+                  <td style="border:1px solid #ddd; padding:8px;">${ii + 1}</td>
+                  <td style="border:1px solid #ddd; padding:8px;">${item.bookName}</td>
+                  <td style="border:1px solid #ddd; padding:8px;">${item.authorName}</td>
+                  <td style="border:1px solid #ddd; padding:8px;">${item.quantity}</td>
+                  <td style="border:1px solid #ddd; padding:8px;">₹${item.unitPrice.toFixed(2)}</td>
+                  <td style="border:1px solid #ddd; padding:8px;">₹${item.subtotal.toFixed(2)}</td>
+                </tr>
+              `
+            )
+          )
+          .join("")}
+          </tbody>
+        </table>
 
-      <div style="margin-top: 20px; font-size: 1rem;">
-        <p>Subtotal (excl. GST): ₹${subtotal.toFixed(2)}</p>
-        <p>GST (5%): ₹${gstAmount.toFixed(2)}</p>
-        <p style="font-weight:bold; font-size:1.2rem; margin-top:10px;">
-          Grand Total: ₹${grandTotal.toFixed(2)}
+        ${batch.some(order => order.orderMode === "UPI" && razorpayInfoMap[order.id])
+          ? batch
+            .map(order => {
+              if (order.orderMode === "UPI" && razorpayInfoMap[order.id]) {
+                const info = razorpayInfoMap[order.id];
+                return `
+                      <div style="margin-top: 10px; background: #f8f9fa; padding: 10px; border: 1px solid #ddd; font-size: 0.9rem;">
+                        <strong>Razorpay Details:</strong><br/>
+                        Order ID: ${info.razorpayOrderId}<br/>
+                        Payment ID: ${info.razorpayPaymentId}<br/>
+                        Signature: ${info.razorpaySignature}
+                      </div>
+                    `;
+              }
+              return "";
+            })
+            .join("")
+          : ""
+        }
+
+        <div style="margin-top: 20px; font-size: 1rem;">
+          <p>Subtotal (excl. GST): ₹${subtotal.toFixed(2)}</p>
+          <p>GST (5%): ₹${gstAmount.toFixed(2)}</p>
+          <p style="font-weight:bold; font-size:1.2rem; margin-top:10px;">
+            Grand Total: ₹${grandTotal.toFixed(2)}
+          </p>
+        </div>
+
+        <p style="margin-top: 40px; text-align: center; font-size: 20px; color: gray;">
+          Thank you for shopping with 📚Bookify!
         </p>
       </div>
+    `;
 
-      <p style="margin-top: 40px; text-align: center; font-size: 20px; color: gray;">
-        Thank you for shopping with 📚Bookify!
-      </p>
-    </div>
-  `;
+      const iframe = document.createElement("iframe");
+      iframe.style.position = "fixed";
+      iframe.style.right = "0";
+      iframe.style.bottom = "0";
+      iframe.style.width = "0";
+      iframe.style.height = "0";
+      iframe.style.border = "0";
+      document.body.appendChild(iframe);
 
-    const iframe = document.createElement("iframe");
-    iframe.style.position = "fixed";
-    iframe.style.right = "0";
-    iframe.style.bottom = "0";
-    iframe.style.width = "0";
-    iframe.style.height = "0";
-    iframe.style.border = "0";
-    document.body.appendChild(iframe);
+      const doc = iframe.contentWindow.document;
+      doc.open();
+      doc.write(printContent);
+      doc.close();
 
-    const doc = iframe.contentWindow.document;
-    doc.open();
-    doc.write(printContent);
-    doc.close();
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
 
-    iframe.contentWindow.focus();
-    iframe.contentWindow.print();
-
-    iframe.onload = () => {
-      setTimeout(() => document.body.removeChild(iframe), 1000);
-    };
+      iframe.onload = () => {
+        setTimeout(() => document.body.removeChild(iframe), 1000);
+      };
+    } catch (err) {
+      handleError(err,"Failed to print order.");
+    }
   };
-
 
   return (
     <div className="container mt-4 mb-0">
@@ -610,9 +615,9 @@ function OrderPage() {
                           type: "info",
                           onConfirm: null
                         });
-                      } else {
-                        handleEdit(batch[0]);
+                        return;
                       }
+                      handleEdit(batch[0]);
                     }}
                     style={{
                       cursor: (orderStatus === "Delivered" || orderStatus === "Cancelled") ? "not-allowed" : "pointer",
@@ -802,8 +807,27 @@ function OrderPage() {
                               {/*Return/Replacement button */}
                               <button
                                 className="btn btn-sm"
-                                disabled={order.orderStatus !== "Delivered" || item.quantity <= 0}
-                                onClick={() => openReturnModal(order, item)}
+                                onClick={() => {
+                                  if (order.orderStatus !== "Delivered") {
+                                    setModal({
+                                      show: true,
+                                      title: "Return & Replacement Restricted",
+                                      message: "Return & Replacement is allowed only for delivered products.",
+                                      type: "info",
+                                      onConfirm: null
+                                    });
+                                    return;
+                                  } else if (item.quantity <= 0) {
+                                    setModal({
+                                      show: true,
+                                      title: "Return & Replacement Restricted",
+                                      message: "Return & Replacement is allowed only for products whose quantity is greater than zero.",
+                                      type: "info",
+                                      onConfirm: null
+                                    });
+                                    return;
+                                  } openReturnModal(order, item)
+                                }}
                                 style={{
                                   cursor: (order.orderStatus !== "Delivered" || item.quantity <= 0) ? "not-allowed" : "pointer",
                                   opacity: (order.orderStatus !== "Delivered" || item.quantity <= 0) ? 0.5 : 1

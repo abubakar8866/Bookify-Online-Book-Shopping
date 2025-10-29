@@ -252,6 +252,11 @@ export function removeOrderItem(orderId, bookId) {
   return API.delete(`/order/${orderId}/book/${bookId}`);
 }
 
+// Print order (only for delivered orders)
+export function printOrder(orderId, orderStatus) {
+  return API.get(`/order/${orderId}/print/${orderStatus}`);
+}
+
 /* -------------------- PAYMENT (RAZORPAY) -------------------- */
 
 //Feching RazerPayKey

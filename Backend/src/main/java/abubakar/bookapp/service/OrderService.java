@@ -2,6 +2,7 @@ package abubakar.bookapp.service;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import abubakar.bookapp.models.Book;
 import abubakar.bookapp.models.Order;
@@ -15,6 +16,7 @@ import abubakar.bookapp.repository.CartRepository;
 import abubakar.bookapp.repository.OrderRepository;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -92,6 +94,12 @@ public class OrderService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found with id: " + orderId));
 
+        // Prevent editing if Delivered or Cancelled
+        if ("Delivered".equalsIgnoreCase(order.getOrderStatus())
+                || "Cancelled".equalsIgnoreCase(order.getOrderStatus())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You cannot edit this order.");
+        }
+
         if (dto.getUserName() != null)
             order.setUserName(dto.getUserName());
         if (dto.getAddress() != null)
@@ -107,6 +115,16 @@ public class OrderService {
     public void removeOrder(Long orderId) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found."));
+
+        // Restrict UPI orders
+        if ("UPI".equalsIgnoreCase(order.getOrderMode())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You cannot cancel orders placed via UPI.");
+        }
+
+        // Prevent deleting delivered orders
+        if ("Delivered".equalsIgnoreCase(order.getOrderStatus())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You cannot delete a delivered order.");
+        }
 
         // Restore stock for each item in the order
         for (OrderItem item : order.getItems()) {
@@ -125,6 +143,18 @@ public class OrderService {
     public void removeOrderItem(Long orderId, Long bookId) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found."));
+
+        // Restrict UPI orders
+        if ("UPI".equalsIgnoreCase(order.getOrderMode())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You cannot cancel products from a UPI order.");
+        }
+
+        // Restrict if Delivered or Cancelled
+        if ("Delivered".equalsIgnoreCase(order.getOrderStatus())
+                || "Cancelled".equalsIgnoreCase(order.getOrderStatus())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "This action is not allowed because the order is " + order.getOrderStatus().toLowerCase() + ".");
+        }
 
         // Find the item inside this order
         OrderItem itemToRemove = order.getItems().stream()
@@ -167,6 +197,12 @@ public class OrderService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found."));
 
+        // Allow only delivered orders
+        if (!"Delivered".equalsIgnoreCase(order.getOrderStatus())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Review & Rating is allowed only for delivered products.");
+        }
+
         OrderItem item = order.getItems().stream()
                 .filter(i -> i.getBookId().equals(bookId))
                 .findFirst()
@@ -189,6 +225,21 @@ public class OrderService {
                 .filter(i -> i.getBookId().equals(bookId))
                 .findFirst()
                 .orElse(item);
+    }
+
+    //Printing Order
+    @Transactional
+    public Order printOrder(Long orderId, String orderStatus) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found."));
+
+        //Only Delivered allowed
+        if (!"Delivered".equalsIgnoreCase(orderStatus)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Printing is allowed only for delivered orders.");
+        }
+
+        // (You can add your print logic here)
+        return order;
     }
 
     // Dashboard stats (today + totals + recent)

@@ -1,10 +1,7 @@
 package abubakar.bookapp.controller;
 
-import java.util.Optional;
-
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.validation.BindingResult;
@@ -22,6 +19,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import abubakar.bookapp.exception.AdminAlreadyExistsException;
+import abubakar.bookapp.exception.UserNotFoundException;
 import abubakar.bookapp.models.User;
 import abubakar.bookapp.payload.LoginRequest;
 import abubakar.bookapp.payload.RegisterRequest;
@@ -84,32 +83,24 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest req, BindingResult result) {
         if (result.hasErrors()) {
-            return ResponseEntity.badRequest()
-                    .body(result.getAllErrors().stream()
-                            .map(err -> err.getDefaultMessage())
-                            .toList());
+            return ResponseEntity.badRequest().body(result.getAllErrors()
+                    .stream().map(err -> err.getDefaultMessage()).toList());
         }
 
-        try {
-            authManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(req.getEmail(), req.getPassword()));
+        authManager.authenticate(new UsernamePasswordAuthenticationToken(req.getEmail(), req.getPassword()));
 
-            User user = repo.findByEmail(req.getEmail())
-                    .orElseThrow(() -> new RuntimeException("User not found"));
+        User user = repo.findByEmail(req.getEmail())
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
 
-            String roleWithoutPrefix = user.getRole().startsWith("ROLE_")
-                    ? user.getRole().substring(5)
-                    : user.getRole();
+        String roleWithoutPrefix = user.getRole().startsWith("ROLE_")
+                ? user.getRole().substring(5)
+                : user.getRole();
 
-            String token = jwtUtils.generateJwtToken(user.getEmail(), roleWithoutPrefix);
+        String token = jwtUtils.generateJwtToken(user.getEmail(), roleWithoutPrefix);
 
-            return ResponseEntity.ok(java.util.Map.of(
-                    "token", token,
-                    "role", user.getRole()));
-
-        } catch (BadCredentialsException ex) {
-            return ResponseEntity.status(401).body("Invalid credentials");
-        }
+        return ResponseEntity.ok(java.util.Map.of(
+                "token", token,
+                "role", user.getRole()));
     }
 
     @PostMapping("/register-admin")
@@ -129,15 +120,15 @@ public class AuthController {
         boolean adminExists = repo.findAll().stream()
                 .anyMatch(user -> "ROLE_ADMIN".equals(user.getRole()));
         if (adminExists) {
-            return ResponseEntity.status(403).body("Admin already exists");
+            throw new AdminAlreadyExistsException("An admin account already exists.");
         }
 
         // Check if email already in use
         if (repo.findByEmail(req.getEmail()).isPresent()) {
-            return ResponseEntity.badRequest().body("Email already in use");
+            throw new IllegalArgumentException("Email already in use.");
         }
 
-        // Create the first admin
+        // Create and save admin
         User u = new User();
         u.setName(req.getName());
         u.setEmail(req.getEmail());
@@ -160,13 +151,9 @@ public class AuthController {
 
     @GetMapping("/email/{email}")
     public ResponseEntity<?> getUserIdByEmail(@PathVariable String email) {
-        Optional<User> optionalUser = userService.findByEmail(email);
-        User user = optionalUser.orElse(null);
-        if (user != null) {
-            return ResponseEntity.ok().body(new USerIdResponse(user.getId()));
-        } else {
-            return ResponseEntity.status(404).body("User not found");
-        }
+        User user = userService.findByEmail(email)
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
+        return ResponseEntity.ok(new USerIdResponse(user.getId()));
     }
 
     @GetMapping("/profile/{id}")
@@ -204,23 +191,14 @@ public class AuthController {
             @PathVariable Long id,
             @RequestPart("value") String value,
             @RequestPart(value = "file", required = false) MultipartFile file) {
+
         try {
-            // Parse JSON string into User object
             ObjectMapper mapper = new ObjectMapper();
             User updatedUser = mapper.readValue(value, User.class);
-
-            // Call service to handle update (returns updated User)
             User result = userService.updateProfile(id, updatedUser, file);
-
-            return ResponseEntity.ok(result); // Return updated user JSON
-
-        } catch (RuntimeException e) {
-            // Custom business exceptions (like "User not found")
-            return ResponseEntity.status(404).body(e.getMessage());
-
+            return ResponseEntity.ok(result);
         } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(500).body("Failed to update profile");
+            throw new RuntimeException("Failed to update profile", e);
         }
     }
 

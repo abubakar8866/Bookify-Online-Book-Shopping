@@ -14,8 +14,14 @@ export default function BooksPage() {
   const [totalPages, setTotalPages] = useState(0);
   const [selectedBook, setSelectedBook] = useState(null); // for modal
   const [searchTerm, setSearchTerm] = useState("");
-  const [alertModal, setAlertModal] = useState({ show: false, title: "", message: "", type: "info" });
   const nav = useNavigate();
+  const [modal, setModal] = useState({
+    show: false,
+    title: "",
+    message: "",
+    type: "info",
+    onConfirm: null
+  });
 
   useEffect(() => {
     const delayDebounce = setTimeout(() => {
@@ -28,6 +34,28 @@ export default function BooksPage() {
 
     return () => clearTimeout(delayDebounce);
   }, [searchTerm, page]);
+
+  const handleError = (error, fallbackMessage = "Something went wrong. Please try again.") => {
+    let message = fallbackMessage;
+
+    if (error.response && error.response.data) {
+      if (typeof error.response.data === "string") {
+        message = error.response.data;
+      } else if (error.response.data.message) {
+        message = error.response.data.message;
+      }
+    } else if (error.message) {
+      message = error.message;
+    }
+
+    setModal({
+      show: true,
+      title: "Error",
+      message,
+      type: "danger",
+      onConfirm: null
+    });
+  };
 
   async function fetchBooks(page = 0) {
     setLoading(true);
@@ -67,10 +95,6 @@ export default function BooksPage() {
     }
   }
 
-  const showAlert = (title, message, type = "info") => {
-    setAlertModal({ show: true, title, message, type });
-  };
-
   const handleAddToCart = async (bookId) => {
     try {
       const userId = localStorage.getItem("userId");
@@ -79,14 +103,15 @@ export default function BooksPage() {
         return;
       }
       const res = await addToCart(userId, bookId);
-      showAlert("Cart Updated", `"${res.data.book.name}" added to cart!`, "success");
+      setModal({
+        show: true,
+        title: "Cart Updated",
+        message: `"${res.data.book.name}" added to cart!`,
+        type: "success",
+      });
     } catch (err) {
-      console.error("Failed to add to cart:", err);
-      if (err.response && err.response.status === 409) {
-        showAlert("Already in Cart", "This book is already in your cart.", "warning");
-      } else {
-        showAlert("Error", "Could not add to cart. Please try again.", "error");
-      }
+      console.log(err);
+      handleError(err,"Failed to submit cart request.");
     }
   };
 
@@ -98,14 +123,15 @@ export default function BooksPage() {
         return;
       }
       const res = await addToWishlist(userId, bookId);
-      showAlert("Wishlist Updated", `"${res.data.book.name}" added to wishlist!`, "success");
+      setModal({
+        show: true,
+        title: "Wishlist Updated",
+        message: `"${res.data.book.name}" added to wishlist!`,
+        type: "success",
+      });
     } catch (err) {
       console.error("Failed to add to wishlist:", err);
-      if (err.response && err.response.status === 409) {
-        showAlert("Already in Wishlist", "This book is already in your wishlist.", "warning");
-      } else {
-        showAlert("Error", "Could not add to wishlist. Please try again.", "error");
-      }
+      handleError(err,"Failed to submit wishlist request.");
     }
   };
 
@@ -357,13 +383,14 @@ export default function BooksPage() {
         </div>
       )}
 
-      {/* Alert Modal for actions */}
+      {/* Alert Modal */}
       <AlertModal
-        show={alertModal.show}
-        onHide={() => setAlertModal({ ...alertModal, show: false })}
-        title={alertModal.title}
-        message={alertModal.message}
-        type={alertModal.type}
+        show={modal.show}
+        onHide={() => setModal({ ...modal, show: false })}
+        title={modal.title}
+        message={modal.message}
+        type={modal.type}
+        onConfirm={modal.onConfirm}
       />
 
     </div>

@@ -22,7 +22,7 @@ export default function AuthorsPage() {
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
-  const [alertConfig, setAlertConfig] = useState({
+  const [modal, setModal] = useState({
     show: false,
     title: "",
     message: "",
@@ -54,6 +54,28 @@ export default function AuthorsPage() {
     return () => clearTimeout(delayDebounce);
   }, [searchTerm, page]);
 
+  const handleError = (error, fallbackMessage = "Something went wrong. Please try again.") => {
+    let message = fallbackMessage;
+
+    if (error.response && error.response.data) {
+      if (typeof error.response.data === "string") {
+        message = error.response.data;
+      } else if (error.response.data.message) {
+        message = error.response.data.message;
+      }
+    } else if (error.message) {
+      message = error.message;
+    }
+
+    setModal({
+      show: true,
+      title: "Error",
+      message,
+      type: "danger",
+      onConfirm: null
+    });
+  };
+
   async function fetchAuthors(pageNumber = 0) {
     setLoading(true);
     try {
@@ -84,8 +106,6 @@ export default function AuthorsPage() {
       setLoading(false);
     }
   }
-
-
 
   function handleOpenModal(author = null) {
     setErrors({});
@@ -186,7 +206,7 @@ export default function AuthorsPage() {
       }
       await fetchAuthors(page);
 
-      setAlertConfig({
+      setModal({
         show: true,
         title: "Success",
         message: editingAuthor ? "Author updated successfully!" : "Author created successfully!",
@@ -197,31 +217,13 @@ export default function AuthorsPage() {
       setForm(initialFormState());
       setPreviewUrl(null);
     } catch (err) {
-      if (err.response && err.response.status === 400) {
-        const data = err.response.data;
-        if (data.errors) {
-          const fieldErrors = {};
-          data.errors.forEach(e => {
-            fieldErrors[e.field] = e.defaultMessage;
-          });
-          setErrors(fieldErrors);
-        } else if (typeof data === "string") {
-          setErrors({ global: data });
-        }
-      } else {
-        console.error("Error saving author:", err);
-        setAlertConfig({
-          show: true,
-          title: "Error",
-          message: "Failed to save author.",
-          type: "error"
-        });
-      }
+      console.l(err);
+      handleError(err,"Failed to submit your Author request.");
     }
   }
 
   const handleDelete = (id) => {
-    setAlertConfig({
+    setModal({
       show: true,
       title: "Confirm Delete",
       message: "Are you sure you want to delete this Author?",
@@ -229,7 +231,7 @@ export default function AuthorsPage() {
       onConfirm: async () => {
         try {
           await deleteAuthor(id);
-          setAlertConfig({
+          setModal({
             show: true,
             title: "Deleted",
             message: "Author deleted successfully!",
@@ -246,12 +248,7 @@ export default function AuthorsPage() {
           }
         } catch (err) {
           console.error("Error deleting author", err);
-          setAlertConfig({
-            show: true,
-            title: "Error",
-            message: "Failed to delete author.",
-            type: "error"
-          });
+          handleError(err,"Failed to delete author");
         }
       }
     });
@@ -265,7 +262,7 @@ export default function AuthorsPage() {
   function handleSearchInputChange(e) {
     const value = e.target.value;
     setSearchTerm(value);
-    setPage(0); 
+    setPage(0);
   }
 
 
@@ -282,14 +279,14 @@ export default function AuthorsPage() {
             value={searchTerm}
             onChange={handleSearchInputChange}
             className="form-control shadow-sm"
-          />  
+          />
           <button
             className="btn btn-outline-primary shadow-sm rounded"
             onClick={() => handleOpenModal()}
           >
-          <i className="bi bi-plus" style={{fontSize:"19px"}}></i>
-        </button>        
-        </div>        
+            <i className="bi bi-plus" style={{ fontSize: "19px" }}></i>
+          </button>
+        </div>
 
       </div>
 
@@ -342,8 +339,8 @@ export default function AuthorsPage() {
                   </div>
 
                   <div className="card-footer d-flex justify-content-between">
-                    <button className="btn btn-outline-primary btn-sm" onClick={() => handleOpenModal(author)}><i className="bi bi-pencil" style={{fontSize:"13px"}}></i></button>
-                    <button className="btn btn-outline-danger btn-sm" onClick={() => handleDelete(author.id)}><i className="bi bi-trash" style={{fontSize:"13px"}}></i></button>
+                    <button className="btn btn-outline-primary btn-sm" onClick={() => handleOpenModal(author)}><i className="bi bi-pencil" style={{ fontSize: "13px" }}></i></button>
+                    <button className="btn btn-outline-danger btn-sm" onClick={() => handleDelete(author.id)}><i className="bi bi-trash" style={{ fontSize: "13px" }}></i></button>
                   </div>
                 </div>
               </div>
@@ -525,12 +522,12 @@ export default function AuthorsPage() {
 
       {/* ✅ AlertModal */}
       <AlertModal
-        show={alertConfig.show}
-        onHide={() => setAlertConfig(prev => ({ ...prev, show: false }))}
-        title={alertConfig.title}
-        message={alertConfig.message}
-        type={alertConfig.type}
-        onConfirm={alertConfig.onConfirm}
+        show={modal.show}
+        onHide={() => setModal(prev => ({ ...prev, show: false }))}
+        title={modal.title}
+        message={modal.message}
+        type={modal.type}
+        onConfirm={modal.onConfirm}
       />
 
     </div>

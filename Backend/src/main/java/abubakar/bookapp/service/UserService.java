@@ -8,6 +8,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import abubakar.bookapp.exception.FileStorageException;
+import abubakar.bookapp.exception.InvalidTokenException;
+import abubakar.bookapp.exception.UserNotFoundException;
 import abubakar.bookapp.models.User;
 import abubakar.bookapp.repository.UserRepository;
 
@@ -32,52 +35,49 @@ public class UserService {
     // Generate reset token
     public String generateResetToken(String email) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
+                .orElseThrow(() -> new UserNotFoundException("User not found with email: " + email));
 
         String token = UUID.randomUUID().toString();
         user.setResetToken(token);
-        user.setTokenExpiry(LocalDateTime.now().plusHours(1)); // valid 1 hour
+        user.setTokenExpiry(LocalDateTime.now().plusHours(1));
         userRepository.save(user);
 
-        // Build dynamic frontend URL
-        String resetUrl = ServletUriComponentsBuilder.fromCurrentContextPath()
-                .scheme("http") 
-                .host("localhost") 
-                .port(3000)
-                .path("/reset-password")
-                .queryParam("token", token)
-                .toUriString();
+        try {
+            String resetUrl = ServletUriComponentsBuilder.fromCurrentContextPath()
+                    .scheme("http")
+                    .host("localhost")
+                    .port(3000)
+                    .path("/reset-password")
+                    .queryParam("token", token)
+                    .toUriString();
 
-        // Send email
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setTo(user.getEmail());
-        message.setSubject("Password Reset Request");
-        message.setText("To reset your password, click the link: " + resetUrl);
-        mailSender.send(message);
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo(user.getEmail());
+            message.setSubject("Password Reset Request");
+            message.setText("Click the link to reset your password: " + resetUrl);
+            mailSender.send(message);
 
-        return "Email sent successfully";
+            return "Password reset email sent successfully";
+
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to send reset email", e);
+        }
     }
 
-    // Reset password using token
+    // Reset password
     public String resetPassword(String token, String newPassword) {
-        Optional<User> optionalUser = userRepository.findByResetToken(token);
-        if (optionalUser.isPresent()) {
-            User user = optionalUser.get();
+        User user = userRepository.findByResetToken(token)
+                .orElseThrow(() -> new InvalidTokenException("Invalid password reset token"));
 
-            // Check token expiry
-            if (user.getTokenExpiry().isBefore(LocalDateTime.now())) {
-                return "Token expired. Please request a new password reset.";
-            }
-
-            // Hash the new password
-            user.setPassword(passwordEncoder.encode(newPassword));
-            user.setResetToken(null);
-            user.setTokenExpiry(null);
-            userRepository.save(user);
-            return "Password reset successfully";
-        } else {
-            return "Invalid token";
+        if (user.getTokenExpiry().isBefore(LocalDateTime.now())) {
+            throw new InvalidTokenException("Token expired. Please request a new password reset.");
         }
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setResetToken(null);
+        user.setTokenExpiry(null);
+        userRepository.save(user);
+        return "Password reset successfully";
     }
 
     // Find user by email
@@ -90,42 +90,42 @@ public class UserService {
         return userRepository.findById(id);
     }
 
-    // Update profile with optional image upload
+    // Update profile
     public User updateProfile(Long id, User updatedUser, MultipartFile file) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new UserNotFoundException("User not found with id: " + id));
 
-        if (updatedUser.getName() != null)
-            user.setName(updatedUser.getName());
-        if (updatedUser.getAddress() != null)
-            user.setAddress(updatedUser.getAddress());
-        if (updatedUser.getGender() != null)
-            user.setGender(updatedUser.getGender());
-        if (updatedUser.getFavouriteBook() != null)
-            user.setFavouriteBook(updatedUser.getFavouriteBook());
-        if (updatedUser.getFavouriteAuthor() != null)
-            user.setFavouriteAuthor(updatedUser.getFavouriteAuthor());
-        if (updatedUser.getPassword() != null && !updatedUser.getPassword().isBlank())
-            user.setPassword(passwordEncoder.encode(updatedUser.getPassword()));
+        try {
+            if (updatedUser.getName() != null)
+                user.setName(updatedUser.getName());
+            if (updatedUser.getAddress() != null)
+                user.setAddress(updatedUser.getAddress());
+            if (updatedUser.getGender() != null)
+                user.setGender(updatedUser.getGender());
+            if (updatedUser.getFavouriteBook() != null)
+                user.setFavouriteBook(updatedUser.getFavouriteBook());
+            if (updatedUser.getFavouriteAuthor() != null)
+                user.setFavouriteAuthor(updatedUser.getFavouriteAuthor());
+            if (updatedUser.getPassword() != null && !updatedUser.getPassword().isBlank()) {
+                user.setPassword(passwordEncoder.encode(updatedUser.getPassword()));
+            }
 
-        // Handle file upload via FileStorageService
-        if (file != null && !file.isEmpty()) {
-            try {
-                // Delete old image if it exists
+            // Handle file upload
+            if (file != null && !file.isEmpty()) {
                 if (user.getImageUrl() != null) {
                     fileStorageService.delete(user.getImageUrl());
                 }
-
-                // Save new image and set URL
                 String fileUrl = fileStorageService.saveProfileImage(file, id);
                 user.setImageUrl(fileUrl);
-
-            } catch (Exception e) {
-                throw new RuntimeException("Failed to store profile image", e);
             }
-        }
 
-        return userRepository.save(user);
+            return userRepository.save(user);
+
+        } catch (FileStorageException e) {
+            throw e; // already handled globally
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to update profile", e);
+        }
     }
 
 }

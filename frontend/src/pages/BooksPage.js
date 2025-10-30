@@ -24,7 +24,7 @@ export default function AllBooksPage() {
   const [authors, setAuthors] = useState([]);
   const [selectedBook, setSelectedBook] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [alert, setAlert] = useState({
+  const [modal, setModal] = useState({
     show: false,
     title: "",
     message: "",
@@ -61,7 +61,27 @@ export default function AllBooksPage() {
     fetchAuthors();
   }, []);
 
+  const handleError = (error, fallbackMessage = "Something went wrong. Please try again.") => {
+    let message = fallbackMessage;
 
+    if (error.response && error.response.data) {
+      if (typeof error.response.data === "string") {
+        message = error.response.data;
+      } else if (error.response.data.message) {
+        message = error.response.data.message;
+      }
+    } else if (error.message) {
+      message = error.message;
+    }
+
+    setModal({
+      show: true,
+      title: "Error",
+      message,
+      type: "danger",
+      onConfirm: null
+    });
+  };
 
   const loadBooks = async (pageNumber) => {
     try {
@@ -70,14 +90,9 @@ export default function AllBooksPage() {
       setTotalPages(res.data.totalPages);
       setLoading(false);
     } catch (err) {
-      console.error("Failed to fetch books", err);
+      console.error("Failed to fetch books.", err);
       setLoading(false);
-      setAlert({
-        show: true,
-        title: "Error",
-        message: "Failed to fetch books.",
-        type: "error",
-      });
+      handleError(err,'Failed to fetch books.');
     }
   };
 
@@ -86,13 +101,8 @@ export default function AllBooksPage() {
       const data = await getAuthorNames();
       setAuthors(data);
     } catch (err) {
-      console.error("Failed to fetch authors", err);
-      setAlert({
-        show: true,
-        title: "Error",
-        message: "Failed to fetch authors.",
-        type: "error",
-      });
+      console.error("Failed to fetch authors.", err);
+      handleError(err,'Failed to fetch authors.');
     }
   };
 
@@ -108,6 +118,7 @@ export default function AllBooksPage() {
         setTotalPages(0);
       } else {
         console.error("Search error:", err);
+        handleError(err,'Search Failed');
       }
     } finally {
       setLoading(false);
@@ -189,7 +200,7 @@ export default function AllBooksPage() {
       if (editing) {
         // Update existing book
         await updateBook(editing.id, dto, form.file);
-        setAlert({
+        setModal({
           show: true,
           title: "Success",
           message: "Book updated successfully!",
@@ -198,7 +209,7 @@ export default function AllBooksPage() {
       } else {
         // Create new book
         await createBook(dto, form.file);
-        setAlert({
+        setModal({
           show: true,
           title: "Success",
           message: "Book created successfully!",
@@ -224,17 +235,12 @@ export default function AllBooksPage() {
       setErrors({});
     } catch (err) {
       console.error("Error saving book", err);
-      setAlert({
-        show: true,
-        title: "Error",
-        message: "Failed to save book.",
-        type: "error",
-      });
+      handleError(err,'Failed to save books');
     }
   };
 
   const handleDelete = (id) => {
-    setAlert({
+    setModal({
       show: true,
       title: "Confirm Delete",
       message: "Are you sure you want to delete this book?",
@@ -242,7 +248,7 @@ export default function AllBooksPage() {
       onConfirm: async () => {
         try {
           await deleteBook(id);
-          setAlert({
+          setModal({
             show: true,
             title: "Deleted",
             message: "Book deleted successfully!",
@@ -257,18 +263,12 @@ export default function AllBooksPage() {
             setTotalPages(res.data.totalPages);
           }
         } catch (err) {
-          console.error("Error deleting book", err);
-          setAlert({
-            show: true,
-            title: "Error",
-            message: "Failed to delete book.",
-            type: "error",
-          });
+          console.error("Error deleting book.", err);
+          handleError(err,"Failed to delete book.");
         }
       },
     });
   };
-
 
   const onDrop = (acceptedFiles) => {
     if (acceptedFiles.length > 0) {
@@ -496,7 +496,7 @@ export default function AllBooksPage() {
               </div>
             </div>
           )}
-          
+
           {/* Pagination */}
           {totalPages > 1 && (
             <nav style={{ paddingTop: '10px' }}>
@@ -719,12 +719,12 @@ export default function AllBooksPage() {
 
       {/* ✅ Alert Modal */}
       <AlertModal
-        show={alert.show}
-        onHide={() => setAlert({ ...alert, show: false })}
-        title={alert.title}
-        message={alert.message}
-        type={alert.type}
-        onConfirm={alert.onConfirm}
+        show={modal.show}
+        onHide={() => setModal({ ...modal, show: false })}
+        title={modal.title}
+        message={modal.message}
+        type={modal.type}
+        onConfirm={modal.onConfirm}
       />
 
     </div>

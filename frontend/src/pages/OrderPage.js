@@ -364,7 +364,6 @@ function OrderPage() {
     setReturnModal({ visible: true, order, item });
   };
 
-
   const validateAndSubmit = () => {
     const newErrors = {};
 

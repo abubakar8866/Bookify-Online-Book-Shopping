@@ -1,6 +1,8 @@
 package abubakar.bookapp.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import abubakar.bookapp.exception.ResourceNotFoundException;
 import abubakar.bookapp.models.Author;
 import abubakar.bookapp.models.Book;
 import abubakar.bookapp.repository.AuthorRepository;
@@ -12,15 +14,18 @@ import abubakar.bookapp.payload.AuthorWithBookCountDTO;
 import jakarta.validation.Valid;
 import jakarta.validation.Validation;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.util.List;
@@ -119,7 +124,8 @@ public class AuthorController {
             @RequestPart("value") String valueJson,
             @RequestPart(value = "file", required = false) MultipartFile file) throws IOException {
 
-        Author existing = repo.findById(id).orElseThrow();
+        Author existing = repo.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Author not found with ID: " + id));
 
         AuthorDTO dto = objectMapper.readValue(valueJson, AuthorDTO.class);
 
@@ -155,24 +161,23 @@ public class AuthorController {
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> delete(@PathVariable Long id) {
-        return repo.findById(id)
-                .map(existing -> {
-                    try {
-                        repo.delete(existing);
-                        repo.flush();
+        Author existing = repo.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Author not found with ID: " + id));
 
-                        if (existing.getImageUrl() != null && !existing.getImageUrl().isBlank()) {
-                            fileStorageService.delete(existing.getImageUrl());
-                        }
+        try {
+            repo.delete(existing);
+            repo.flush();
 
-                        return ResponseEntity.ok("Author deleted successfully");
-                    } catch (Exception e) {
-                        return ResponseEntity.status(400)
-                                .body("Cannot delete author because it is referenced by books.");
-                    }
-                })
-                .orElseGet(() -> ResponseEntity.status(404)
-                        .body("Author not found with ID: " + id));
+            if (existing.getImageUrl() != null && !existing.getImageUrl().isBlank()) {
+                fileStorageService.delete(existing.getImageUrl());
+            }
+
+            return ResponseEntity.ok("Author deleted successfully");
+        } catch (DataIntegrityViolationException e) {
+            throw e; // handled globally
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to delete author", e);
+        }
     }
 
     // InCaseSensitive Search Api

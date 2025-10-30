@@ -3,7 +3,9 @@ package abubakar.bookapp.service;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import abubakar.bookapp.models.Book;
 import abubakar.bookapp.models.Wishlist;
@@ -22,7 +24,8 @@ public class WishlistService {
         boolean exists = wishlistRepository.existsByUserIdAndBookId(userId, bookId);
 
         if (exists) {
-            throw new RuntimeException("Book already exists in wishlist");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Book already exists in wishlist.");
         }
 
         return wishlistRepository.save(wishlist);

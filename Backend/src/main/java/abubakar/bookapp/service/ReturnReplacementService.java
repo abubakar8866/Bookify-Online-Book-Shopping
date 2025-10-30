@@ -13,7 +13,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -50,7 +49,7 @@ public class ReturnReplacementService {
                 .findFirst()
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Book not found in order"));
 
-        //Quantity check
+        // Quantity check
         if (item.getQuantity() <= 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Return & Replacement is allowed only for products whose quantity is greater than zero.");
@@ -148,18 +147,13 @@ public class ReturnReplacementService {
 
         // If new files uploaded, add them
         if (images != null && !images.isEmpty()) {
-            try {
-                List<String> newUrls = fileStorageService.editReturnReplacementImages(
-                        existing.getUserId(),
-                        existing.getOrderId(),
-                        existing.getBookId(),
-                        List.of(), // already deleted removed files, keep existing
-                        images);
-                existing.getImageUrls().addAll(newUrls);
-            } catch (IOException e) {
-                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
-                        "Failed to save new images: " + e.getMessage(), e);
-            }
+            List<String> newUrls = fileStorageService.editReturnReplacementImages(
+                    existing.getUserId(),
+                    existing.getOrderId(),
+                    existing.getBookId(),
+                    List.of(), // already deleted removed files, keep existing
+                    images);
+            existing.getImageUrls().addAll(newUrls);
         }
 
         // Save and return

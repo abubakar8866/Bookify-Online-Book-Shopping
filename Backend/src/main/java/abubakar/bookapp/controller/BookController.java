@@ -81,7 +81,7 @@ public class BookController {
         try {
             BookDTO dto = mapper.readValue(valueJson, BookDTO.class);
 
-            // ✅ Validate author existence
+            //Validate author existence
             Author author = authorRepo.findById(dto.getAuthorId())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Author not found"));
 

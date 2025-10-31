@@ -33,63 +33,52 @@ public class CartController {
     @Autowired
     private BookRepository bookRepo;
 
-    // Add book to cart
+    //Add book to cart
     @PostMapping("/{userId}/{bookId}")
     public ResponseEntity<?> addToCart(@PathVariable Long userId, @PathVariable Long bookId,
             Authentication authentication) {
-
         if (authentication == null || authentication.getName() == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User is not authenticated.");
         }
 
         Book book = bookRepo.findById(bookId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Book not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Book not found."));
 
         Cart cart = new Cart();
-        cart.setUser(new User(userId)); 
+        cart.setUser(new User(userId));
         cart.setBook(book);
 
-        // Check if the book is already in the cart
-        boolean exists = cartService.getUserCart(userId).stream()
-                .anyMatch(c -> c.getBook().getId().equals(bookId));
-
-        if (exists) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body("Book already exists in cart");
-        }
-
         Cart savedCart = cartService.addToCart(cart);
-
-        return ResponseEntity.ok(savedCart);
+        return ResponseEntity.status(HttpStatus.CREATED).body(savedCart);
     }
 
-    // Get user cart
+    //Get user cart
     @GetMapping("/{userId}")
     public ResponseEntity<List<Cart>> getCart(@PathVariable Long userId, Authentication authentication) {
-
         if (authentication == null || authentication.getName() == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User is not authenticated.");
         }
 
-        return ResponseEntity.ok(cartService.getUserCart(userId));
+        List<Cart> userCart = cartService.getUserCart(userId);
+        return ResponseEntity.ok(userCart);
     }
 
-    // New method to get user name by userId
+    //Get user name by userId
     @GetMapping("/{userId}/name")
     public ResponseEntity<String> getUserName(@PathVariable Long userId) {
         String userName = cartService.getUserNameByUserId(userId);
         return ResponseEntity.ok(userName);
     }
 
-    // Remove from cart
+    //Remove from cart
     @DeleteMapping("/{userId}/{cartId}")
-    public ResponseEntity<String> removeFromCart(@PathVariable Long userId, @PathVariable Long cartId,
-            Authentication authentication) {
-
+    public ResponseEntity<String> removeFromCart(@PathVariable Long userId, @PathVariable Long cartId, Authentication authentication) {
         if (authentication == null || authentication.getName() == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User is not authenticated.");
         }
 
         cartService.removeFromCart(cartId, userId);
-        return ResponseEntity.ok("Removed from cart");
+        return ResponseEntity.ok("Removed from cart successfully.");
     }
+
 }

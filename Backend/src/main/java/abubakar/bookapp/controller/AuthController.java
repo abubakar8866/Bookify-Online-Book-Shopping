@@ -1,5 +1,6 @@
 package abubakar.bookapp.controller;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -16,8 +17,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.web.server.ResponseStatusException;
 
 import abubakar.bookapp.exception.AdminAlreadyExistsException;
 import abubakar.bookapp.exception.UserNotFoundException;
@@ -67,7 +67,7 @@ public class AuthController {
         }
 
         if (repo.findByEmail(req.getEmail()).isPresent()) {
-            return ResponseEntity.badRequest().body("Email already in use");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email already in use");
         }
 
         User u = new User();
@@ -125,7 +125,7 @@ public class AuthController {
 
         // Check if email already in use
         if (repo.findByEmail(req.getEmail()).isPresent()) {
-            throw new IllegalArgumentException("Email already in use.");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email already in use");
         }
 
         // Create and save admin
@@ -185,21 +185,13 @@ public class AuthController {
                         .toList());
     }
 
-    // Update Profile Api
     @PutMapping(value = "/profile/{id}", consumes = { "multipart/form-data" })
     public ResponseEntity<?> editProfile(
             @PathVariable Long id,
             @RequestPart("value") String value,
             @RequestPart(value = "file", required = false) MultipartFile file) {
 
-        try {
-            ObjectMapper mapper = new ObjectMapper();
-            User updatedUser = mapper.readValue(value, User.class);
-            User result = userService.updateProfile(id, updatedUser, file);
-            return ResponseEntity.ok(result);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to update profile", e);
-        }
+        return ResponseEntity.ok(userService.updateProfile(id, value, file));
     }
 
 }

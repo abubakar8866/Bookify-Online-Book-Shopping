@@ -1,12 +1,8 @@
 package abubakar.bookapp.controller;
 
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
 
-import abubakar.bookapp.models.Book;
-import abubakar.bookapp.models.User;
 import abubakar.bookapp.models.Wishlist;
-import abubakar.bookapp.repository.BookRepository;
 import abubakar.bookapp.service.WishlistService;
 
 import java.util.List;
@@ -30,35 +26,18 @@ public class WishlistController {
     @Autowired
     private WishlistService wishlistService;
 
-    @Autowired
-    private BookRepository bookRepo;
-
     // Add book to wishlist
     @PostMapping("/{userId}/{bookId}")
-    public ResponseEntity<?> addToWishlist(@PathVariable Long userId, @PathVariable Long bookId,
+    public ResponseEntity<Wishlist> addToWishlist(
+            @PathVariable Long userId,
+            @PathVariable Long bookId,
             Authentication authentication) {
 
         if (authentication == null || authentication.getName() == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        Book book = bookRepo.findById(bookId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Book not found"));
-
-        Wishlist wishlist = new Wishlist();
-        wishlist.setUser(new User(userId)); 
-        wishlist.setBook(book);
-
-        // Check if the book is already in the wishlist
-        boolean exists = wishlistService.getUserWishlist(userId).stream()
-                .anyMatch(w -> w.getBook().getId().equals(bookId));
-
-        if (exists) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body("Book already exists in wishlist");
-        }
-
-        Wishlist savedWishlist = wishlistService.addToWishlist(wishlist);
-
+        Wishlist savedWishlist = wishlistService.addToWishlist(userId, bookId);
         return ResponseEntity.ok(savedWishlist);
     }
 

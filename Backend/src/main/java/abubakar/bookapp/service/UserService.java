@@ -1,12 +1,16 @@
 package abubakar.bookapp.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import abubakar.bookapp.exception.FileStorageException;
 import abubakar.bookapp.exception.InvalidTokenException;
@@ -91,11 +95,16 @@ public class UserService {
     }
 
     // Update profile
-    public User updateProfile(Long id, User updatedUser, MultipartFile file) {
+    public User updateProfile(Long id, String value, MultipartFile file) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new UserNotFoundException("User not found with id: " + id));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found with id: " + id));
 
         try {
+            // Parse JSON into User object
+            ObjectMapper mapper = new ObjectMapper();
+            User updatedUser = mapper.readValue(value, User.class);
+
+            // Update fields if provided
             if (updatedUser.getName() != null)
                 user.setName(updatedUser.getName());
             if (updatedUser.getAddress() != null)
@@ -121,10 +130,12 @@ public class UserService {
 
             return userRepository.save(user);
 
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid JSON format in profile data");
         } catch (FileStorageException e) {
-            throw e; // already handled globally
+            throw e; // handled globally
         } catch (Exception e) {
-            throw new RuntimeException("Failed to update profile", e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to update profile");
         }
     }
 

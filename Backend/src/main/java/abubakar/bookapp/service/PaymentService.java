@@ -5,7 +5,9 @@ import java.util.Map;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.razorpay.RazorpayClient;
 import com.razorpay.RazorpayException;
@@ -31,16 +33,21 @@ public class PaymentService {
     @Autowired
     private RazorpayInfoRepository razorpayInfoRepository;
 
-    public String createRazorpayOrder(float amount) throws RazorpayException {
-        RazorpayClient client = new RazorpayClient(razorpayKeyId, razorpaySecret);
+    public String createRazorpayOrder(float amount) {
+        try {
+            RazorpayClient client = new RazorpayClient(razorpayKeyId, razorpaySecret);
 
-        JSONObject options = new JSONObject();
-        options.put("amount", (int) (amount * 100)); // amount in paise
-        options.put("currency", "INR");
-        options.put("receipt", "txn_" + System.currentTimeMillis());
+            JSONObject options = new JSONObject();
+            options.put("amount", (int) (amount * 100)); // paise
+            options.put("currency", "INR");
+            options.put("receipt", "txn_" + System.currentTimeMillis());
 
-        com.razorpay.Order order = client.orders.create(options);
-        return order.toString();
+            com.razorpay.Order order = client.orders.create(options);
+            return order.toString();
+        } catch (RazorpayException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
+                    "Failed to create Razorpay order: " + e.getMessage(), e);
+        }
     }
 
     public boolean verifyPayment(String orderId, String paymentId, String signature) {
@@ -50,54 +57,58 @@ public class PaymentService {
             attributes.put("razorpay_payment_id", paymentId);
             attributes.put("razorpay_signature", signature);
 
-            // If verification fails, it throws RazorpayException
             Utils.verifyPaymentSignature(attributes, razorpaySecret);
-            return true; // success
+            return true;
         } catch (RazorpayException e) {
-            return false; // invalid signature
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid Razorpay payment signature.", e);
         }
     }
 
-    // Razorpay Order Handling
     public Order placeRazorpayOrder(Order order, Map<String, String> paymentData) {
         String razorpayOrderId = paymentData.get("razorpay_order_id");
         String razorpayPaymentId = paymentData.get("razorpay_payment_id");
         String razorpaySignature = paymentData.get("razorpay_signature");
 
-        // 1. Verify payment first
-        if (!verifyPayment(razorpayOrderId, razorpayPaymentId, razorpaySignature)) {
-            throw new RuntimeException("Razorpay Payment Verification Failed!");
-        }
+        // 1. Verify payment
+        verifyPayment(razorpayOrderId, razorpayPaymentId, razorpaySignature);
 
-        // 2. Place order using existing service
+        // 2. Place order
         Order savedOrder = orderService.placeOrder(order);
 
-        // 3. Save Razorpay transaction info
+        // 3. Save payment info
         RazorpayInfo info = new RazorpayInfo();
         info.setOrder(savedOrder);
         info.setRazorpayOrderId(razorpayOrderId);
         info.setRazorpayPaymentId(razorpayPaymentId);
         info.setRazorpaySignature(razorpaySignature);
-        razorpayInfoRepository.save(info);
 
+        razorpayInfoRepository.save(info);
         return savedOrder;
     }
 
-    // fetching RazerPayInfo from DB according to OrderID
     public RazorpayInfo getRazorpayInfoByOrderId(Long orderId) {
-        return razorpayInfoRepository.findByOrderId(orderId);
+        RazorpayInfo info = razorpayInfoRepository.findByOrderId(orderId);
+        if (info == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    "Payment info not found for order ID: " + orderId);
+        }
+        return info;
     }
 
-    // Refund method
-    public Refund refundPayment(String paymentId, double amountInINR) throws RazorpayException {
-        RazorpayClient client = new RazorpayClient(razorpayKeyId, razorpaySecret);
+    public Refund refundPayment(String paymentId, double amountInINR) {
+        try {
+            RazorpayClient client = new RazorpayClient(razorpayKeyId, razorpaySecret);
 
-        JSONObject refundRequest = new JSONObject();
-        refundRequest.put("payment_id", paymentId);
-        refundRequest.put("amount", (int) amountInINR); 
-        refundRequest.put("speed", "normal");
+            JSONObject refundRequest = new JSONObject();
+            refundRequest.put("payment_id", paymentId);
+            refundRequest.put("amount", (int) amountInINR);
+            refundRequest.put("speed", "normal");
 
-        return client.payments.refund(refundRequest);
+            return client.payments.refund(refundRequest);
+        } catch (RazorpayException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
+                    "Razorpay refund failed: " + e.getMessage(), e);
+        }
     }
 
 }

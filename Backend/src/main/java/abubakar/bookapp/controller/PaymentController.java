@@ -25,24 +25,23 @@ public class PaymentController {
     @Value("${razorpay.key.id}")
     private String razorpayKey;
 
+    // Fetch Razorpay Key for frontend
     @GetMapping("/key")
     public ResponseEntity<Map<String, String>> getRazorpayKey() {
         return ResponseEntity.ok(Map.of("key", razorpayKey));
     }
 
+    // Create Razorpay order
     @PostMapping("/create-order")
-    public ResponseEntity<?> createOrder(@RequestBody Map<String, Object> data) {
-        try {
-            float amount = Float.parseFloat(data.get("amount").toString());
-            String order = paymentService.createRazorpayOrder(amount);
-            return ResponseEntity.ok(order);
-        } catch (Exception e) {
-            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
-        }
+    public ResponseEntity<String> createOrder(@RequestBody Map<String, Object> data) {
+        float amount = Float.parseFloat(data.get("amount").toString());
+        String order = paymentService.createRazorpayOrder(amount);
+        return ResponseEntity.ok(order);
     }
 
+    // Verify payment
     @PostMapping("/verify")
-    public ResponseEntity<?> verifyPayment(@RequestBody Map<String, String> data) {
+    public ResponseEntity<Map<String, Object>> verifyPayment(@RequestBody Map<String, String> data) {
         boolean isValid = paymentService.verifyPayment(
                 data.get("razorpay_order_id"),
                 data.get("razorpay_payment_id"),
@@ -50,38 +49,22 @@ public class PaymentController {
         return ResponseEntity.ok(Map.of("success", isValid));
     }
 
+    // Place order (includes payment verification + saving Razorpay info)
     @SuppressWarnings("unchecked")
     @PostMapping("/place-order")
-    public ResponseEntity<?> placeRazorpayOrder(@RequestBody Map<String, Object> request) {
-        try {
-            // Extract order and paymentData from request
-            Map<String, Object> orderMap = (Map<String, Object>) request.get("order");
-            Map<String, String> paymentData = (Map<String, String>) request.get("paymentData");
+    public ResponseEntity<Order> placeRazorpayOrder(@RequestBody Map<String, Object> request) {
+        Map<String, Object> orderMap = (Map<String, Object>) request.get("order");
+        Map<String, String> paymentData = (Map<String, String>) request.get("paymentData");
 
-            // Convert Map to Order object
-            Order order = mapper.convertValue(orderMap, Order.class);
-
-            // Place order through PaymentService (verifies Razorpay + saves order +
-            // RazorpayInfo)
-            Order savedOrder = paymentService.placeRazorpayOrder(order, paymentData);
-
-            return ResponseEntity.ok(savedOrder);
-        } catch (Exception e) {
-            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
-        }
+        Order order = mapper.convertValue(orderMap, Order.class);
+        Order savedOrder = paymentService.placeRazorpayOrder(order, paymentData);
+        return ResponseEntity.ok(savedOrder);
     }
 
+    // Fetch payment info by order ID
     @GetMapping("/info/{orderId}")
-    public ResponseEntity<?> getRazorpayInfo(@PathVariable Long orderId) {
-        try {
-            RazorpayInfo info = paymentService.getRazorpayInfoByOrderId(orderId);
-            if (info == null) {
-                return ResponseEntity.status(404).body(Map.of("error", "Payment info not found for this order"));
-            }
-            return ResponseEntity.ok(info);
-        } catch (Exception e) {
-            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
-        }
+    public ResponseEntity<RazorpayInfo> getRazorpayInfo(@PathVariable Long orderId) {
+        return ResponseEntity.ok(paymentService.getRazorpayInfoByOrderId(orderId));
     }
 
 }

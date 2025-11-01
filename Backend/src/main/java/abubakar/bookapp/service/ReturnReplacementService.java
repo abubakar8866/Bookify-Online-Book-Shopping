@@ -85,7 +85,7 @@ public class ReturnReplacementService {
                     return fileStorageService.saveReturnReplacementImage(file, rr.getUserId(), rr.getOrderId(),
                             rr.getBookId());
                 } catch (Exception e) {
-                    throw new RuntimeException("Failed to upload image: " + file.getOriginalFilename(), e);
+                    throw new RuntimeException("Failed to upload one or more images:" + file.getOriginalFilename(), e);
                 }
             }).toList();
 
@@ -113,10 +113,8 @@ public class ReturnReplacementService {
         String status = existing.getStatus() == null ? "" : existing.getStatus().toUpperCase();
 
         // Prevent editing finalized/processed requests
-        List<String> protectedStatuses = List.of("APPROVED", "RETURNED", "REPLACED", "REFUNDED", "REJECTED");
-        if (protectedStatuses.contains(status)) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
+        if (List.of("APPROVED", "RETURNED", "REPLACED", "REFUNDED", "REJECTED").contains(status)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Cannot edit a request that is already " + status.toLowerCase() + ".");
         }
 
@@ -132,28 +130,26 @@ public class ReturnReplacementService {
         if (updates.getDeliveryDate() != null)
             existing.setDeliveryDate(updates.getDeliveryDate());
 
-        // Image handling
-        List<String> updatedImageUrls = updates.getImageUrls() != null ? updates.getImageUrls()
-                : existing.getImageUrls();
+        try {
+            // Delete removed images
+            List<String> updatedImageUrls = updates.getImageUrls() != null ? updates.getImageUrls()
+                    : existing.getImageUrls();
+            List<String> imagesToDelete = existing.getImageUrls().stream()
+                    .filter(url -> !updatedImageUrls.contains(url))
+                    .toList();
 
-        // Delete removed images
-        List<String> imagesToDelete = existing.getImageUrls().stream()
-                .filter(url -> !updatedImageUrls.contains(url))
-                .toList();
+            fileStorageService.deleteReturnReplacementImages(imagesToDelete);
+            existing.setImageUrls(updatedImageUrls);
 
-        fileStorageService.deleteReturnReplacementImages(imagesToDelete);
-
-        existing.setImageUrls(updatedImageUrls);
-
-        // If new files uploaded, add them
-        if (images != null && !images.isEmpty()) {
-            List<String> newUrls = fileStorageService.editReturnReplacementImages(
-                    existing.getUserId(),
-                    existing.getOrderId(),
-                    existing.getBookId(),
-                    List.of(), // already deleted removed files, keep existing
-                    images);
-            existing.getImageUrls().addAll(newUrls);
+            if (images != null && !images.isEmpty()) {
+                List<String> newUrls = fileStorageService.editReturnReplacementImages(
+                        existing.getUserId(), existing.getOrderId(), existing.getBookId(),
+                        List.of(), images);
+                existing.getImageUrls().addAll(newUrls);
+            }
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error updating request images: " + e.getMessage());
         }
 
         // Save and return
@@ -171,15 +167,13 @@ public class ReturnReplacementService {
         String status = rr.getStatus() == null ? "" : rr.getStatus().toUpperCase();
 
         // Block deletion for finalized/processed requests
-        List<String> protectedStatuses = List.of("APPROVED", "RETURNED", "REPLACED", "REFUNDED", "REJECTED");
-        if (protectedStatuses.contains(status)) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
+        if (List.of("APPROVED", "RETURNED", "REPLACED", "REFUNDED", "REJECTED").contains(status)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Cannot delete a request that is already " + status.toLowerCase() + ".");
         }
 
         // Safely delete any associated files
-        List<String> imageUrls = rr.getImageUrls() == null ? List.of() : rr.getImageUrls();
+        List<String> imageUrls = rr.getImageUrls() == null ? List.of() : rr.getImageUrls(); 
         try {
             fileStorageService.deleteReturnReplacementImages(imageUrls);
         } catch (Exception e) {
@@ -246,7 +240,6 @@ public class ReturnReplacementService {
     }
 
     // ---------------- Helper Methods ----------------
-
     /**
      * Adjusts order item quantity, subtotal, and recalculates total
      * for both RETURN and REPLACEMENT approval flows.
@@ -298,4 +291,5 @@ public class ReturnReplacementService {
     public ReturnReplacement save(ReturnReplacement rr) {
         return repo.save(rr);
     }
+
 }

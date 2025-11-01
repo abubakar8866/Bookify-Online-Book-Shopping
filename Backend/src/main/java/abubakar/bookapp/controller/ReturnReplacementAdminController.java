@@ -15,7 +15,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
-import com.razorpay.RazorpayException;
 import com.razorpay.Refund;
 
 import abubakar.bookapp.models.Order;
@@ -59,13 +58,13 @@ public class ReturnReplacementAdminController {
         return ResponseEntity.ok(updated);
     }
 
-    //Refund Money Api by RazerPay
+    // Refund Money Api by RazerPay
     @PutMapping("/refund/{returnId}")
     public ResponseEntity<?> refundReturnRequest(@PathVariable Long returnId) {
         ReturnReplacement rr = service.getRequestById(returnId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Return request not found"));
 
-        // ✅ Extra safety check
+        // Extra safety check
         if (!"APPROVED".equalsIgnoreCase(rr.getStatus())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Return must be approved before refunding.");
@@ -77,6 +76,9 @@ public class ReturnReplacementAdminController {
         }
 
         RazorpayInfo info = paymentService.getRazorpayInfoByOrderId(rr.getOrderId());
+        if (info == null)
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Razorpay transaction info not found.");
+        
         Order order = orderService.getOrderById(rr.getOrderId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
 
@@ -87,21 +89,15 @@ public class ReturnReplacementAdminController {
 
         double refundAmount = rr.getQuantity() * item.getUnitPrice();
 
-        try {
-            Refund refund = paymentService.refundPayment(info.getRazorpayPaymentId(), refundAmount);
+        Refund refund = paymentService.refundPayment(info.getRazorpayPaymentId(), refundAmount);
 
-            rr.setStatus("REFUNDED");
-            rr.setRefundedAmount(refundAmount);
-            rr.setProcessedDate(LocalDateTime.now());
-            rr.setPaymentId(info.getRazorpayPaymentId());
+        rr.setStatus("REFUNDED");
+        rr.setRefundedAmount(refundAmount);
+        rr.setProcessedDate(LocalDateTime.now());
+        rr.setPaymentId(info.getRazorpayPaymentId());
+        service.save(rr);
 
-            service.save(rr);
-
-            return ResponseEntity.ok(refund.toString());
-        } catch (RazorpayException e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Refund failed: " + e.getMessage());
-        }
+        return ResponseEntity.ok(refund.toString());
     }
 
 }

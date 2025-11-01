@@ -36,25 +36,29 @@ public class OrderService {
     @Autowired
     private CartRepository cartRepository;
 
+    // Place a new order
     public Order placeOrder(Order order) {
         if (order.getItems() == null || order.getItems().isEmpty()) {
-            throw new RuntimeException("Order must contain at least one item.");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Order must contain at least one item.");
         }
 
         float total = 0f;
+
         for (OrderItem item : order.getItems()) {
-            // 🔹 Fetch book to validate stock
             Book book = bookRepository.findById(item.getBookId())
-                    .orElseThrow(() -> new RuntimeException("Book not found."));
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                            "Book not found with ID: " + item.getBookId()));
 
             int newQuantity = book.getQuantity() - item.getQuantity();
             if (newQuantity < 0) {
-                throw new RuntimeException("Insufficient stock for book: " + book.getName());
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Insufficient stock for book: " + book.getName());
             }
+
             book.setQuantity(newQuantity);
             bookRepository.save(book);
 
-            // 🔹 Set snapshot values
+            // Snapshot details
             item.setBookName(book.getName());
             item.setUnitPrice(book.getPrice().floatValue());
             item.setSubtotal(book.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())).floatValue());
@@ -63,6 +67,7 @@ public class OrderService {
 
             total += item.getSubtotal();
         }
+
         order.setTotal(total);
 
         if (order.getUser() != null) {
@@ -72,31 +77,38 @@ public class OrderService {
         return orderRepository.save(order);
     }
 
+    // Get all orders for a user
     public List<Order> getOrdersByUserId(Long userId) {
-        return orderRepository.findByUserId(userId);
+        List<Order> orders = orderRepository.findByUserId(userId);
+        if (orders.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No orders found for user ID: " + userId);
+        }
+        return orders;
     }
 
-    // Fetch all orders (Admin only)
+    // Get all orders (Admin)
     public List<Order> getAllOrders() {
         return orderRepository.findAll();
     }
 
-    // Update only order status (Admin only)
+    // Update only order status (Admin)
     public Order updateOrderStatus(Long orderId, String orderStatus) {
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found with id: " + orderId));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Order not found with ID: " + orderId));
 
         order.setOrderStatus(orderStatus);
         return orderRepository.save(order);
     }
 
+    // Edit order by ID
     public Order editOrderById(Long orderId, OrderUpdateDTO dto) {
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found with id: " + orderId));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Order not found with ID: " + orderId));
 
-        // Prevent editing if Delivered or Cancelled
-        if ("Delivered".equalsIgnoreCase(order.getOrderStatus())
-                || "Cancelled".equalsIgnoreCase(order.getOrderStatus())) {
+        if ("Delivered".equalsIgnoreCase(order.getOrderStatus()) ||
+                "Cancelled".equalsIgnoreCase(order.getOrderStatus())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You cannot edit this order.");
         }
 
@@ -112,26 +124,27 @@ public class OrderService {
         return orderRepository.save(order);
     }
 
+    // Remove an entire order
     public void removeOrder(Long orderId) {
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found."));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Order not found with ID: " + orderId));
 
-        // Restrict UPI orders
         if ("UPI".equalsIgnoreCase(order.getOrderMode())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You cannot cancel orders placed via UPI.");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "You cannot cancel orders placed via UPI.");
         }
 
-        // Prevent deleting delivered orders
         if ("Delivered".equalsIgnoreCase(order.getOrderStatus())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You cannot delete a delivered order.");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "You cannot delete a delivered order.");
         }
 
-        // Restore stock for each item in the order
+        // Restore stock
         for (OrderItem item : order.getItems()) {
             if (item.getBookId() != null) {
                 bookRepository.findById(item.getBookId()).ifPresent(book -> {
-                    int updatedQuantity = book.getQuantity() + item.getQuantity();
-                    book.setQuantity(updatedQuantity);
+                    book.setQuantity(book.getQuantity() + item.getQuantity());
                     bookRepository.save(book);
                 });
             }
@@ -140,81 +153,67 @@ public class OrderService {
         orderRepository.deleteById(orderId);
     }
 
+    // Remove a single item from an order
     public void removeOrderItem(Long orderId, Long bookId) {
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found."));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found."));
 
-        // Restrict UPI orders
         if ("UPI".equalsIgnoreCase(order.getOrderMode())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You cannot cancel products from a UPI order.");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You cannot modify UPI orders.");
         }
 
-        // Restrict if Delivered or Cancelled
-        if ("Delivered".equalsIgnoreCase(order.getOrderStatus())
-                || "Cancelled".equalsIgnoreCase(order.getOrderStatus())) {
+        if ("Delivered".equalsIgnoreCase(order.getOrderStatus()) ||
+                "Cancelled".equalsIgnoreCase(order.getOrderStatus())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "This action is not allowed because the order is " + order.getOrderStatus().toLowerCase() + ".");
+                    "Cannot modify order because it's already " + order.getOrderStatus().toLowerCase());
         }
 
-        // Find the item inside this order
         OrderItem itemToRemove = order.getItems().stream()
                 .filter(item -> item.getBookId().equals(bookId))
                 .findFirst()
-                .orElseThrow(() -> new RuntimeException("Order item not found for bookId: " + bookId));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Book not found in this order."));
 
         // Restore stock
-        if (itemToRemove.getBookId() != null) {
-            bookRepository.findById(itemToRemove.getBookId()).ifPresent(book -> {
-                int updatedQuantity = book.getQuantity() + itemToRemove.getQuantity();
-                book.setQuantity(updatedQuantity);
-                bookRepository.save(book);
-            });
-        }
+        bookRepository.findById(bookId).ifPresent(book -> {
+            book.setQuantity(book.getQuantity() + itemToRemove.getQuantity());
+            bookRepository.save(book);
+        });
 
-        // Remove the item from the order
         order.getItems().remove(itemToRemove);
 
-        // If order is now empty → delete order
         if (order.getItems().isEmpty()) {
             orderRepository.delete(order);
         } else {
-            // 🔹 Recalculate total
-            float newTotal = 0f;
-            for (OrderItem item : order.getItems()) {
-                newTotal += item.getSubtotal(); // use snapshot subtotal
-            }
-            order.setTotal(newTotal);
-
-            // 🔹 Update updatedAt timestamp
+            order.setTotal((float) order.getItems().stream()
+                    .mapToDouble(OrderItem::getSubtotal)
+                    .sum());
             order.setUpdatedAt(LocalDateTime.now());
-
-            orderRepository.save(order); // update order with new total
+            orderRepository.save(order);
         }
     }
 
-    // Add review and rating for an order item
+    // Add review & rating
     public OrderItem addReviewAndRating(Long orderId, Long bookId, String review, Float rating) {
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found."));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found."));
 
-        // Allow only delivered orders
         if (!"Delivered".equalsIgnoreCase(order.getOrderStatus())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Review & Rating is allowed only for delivered products.");
+                    "You can only review delivered products.");
         }
 
         OrderItem item = order.getItems().stream()
                 .filter(i -> i.getBookId().equals(bookId))
                 .findFirst()
-                .orElseThrow(() -> new RuntimeException("Order item not found for bookId: " + bookId));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Book not found in this order."));
 
-        // Save review & rating snapshot inside order item
         item.setReview(review);
         item.setRating(rating);
 
-        // Also add combined Review to Book
         Book book = bookRepository.findById(bookId)
-                .orElseThrow(() -> new RuntimeException("Book not found."));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Book not found."));
 
         if ((review != null && !review.isEmpty()) || rating != null) {
             book.addReview(new Review(review, rating));
@@ -227,29 +226,27 @@ public class OrderService {
                 .orElse(item);
     }
 
-    //Printing Order
+    // Print order (Delivered only)
     @Transactional
     public Order printOrder(Long orderId, String orderStatus) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found."));
 
-        //Only Delivered allowed
         if (!"Delivered".equalsIgnoreCase(orderStatus)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Printing is allowed only for delivered orders.");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Printing is allowed only for delivered orders.");
         }
 
-        // (You can add your print logic here)
         return order;
     }
 
-    // Dashboard stats (today + totals + recent)
+    // Dashboard stats
     public OrderStatsDTO getOrderStats() {
         LocalDateTime startOfToday = LocalDate.now().atStartOfDay();
 
         long todaysOrderCount = orderRepository.countByCreatedAtAfter(startOfToday);
         long totalOrdersCount = orderRepository.count();
 
-        // Convert to BigDecimal and handle null
         BigDecimal todaysOrderTotal = Optional.ofNullable(orderRepository.sumTodaysOrders(startOfToday))
                 .map(BigDecimal::valueOf)
                 .orElse(BigDecimal.ZERO);
@@ -261,17 +258,12 @@ public class OrderService {
         List<Order> recentOrders = orderRepository.findTop5ByOrderByCreatedAtDesc();
 
         return new OrderStatsDTO(
-                todaysOrderCount,
-                totalOrdersCount,
-                todaysOrderTotal,
-                totalOrderAmount,
-                recentOrders);
+                todaysOrderCount, totalOrdersCount, todaysOrderTotal, totalOrderAmount, recentOrders);
     }
 
-    // 🔹 Range stats
+    // Range stats (weekly/monthly)
     public OrderRangeStatsDTO getOrderStatsByRange(LocalDateTime startDate, LocalDateTime endDate) {
         long orderCount = orderRepository.countOrdersInRange(startDate, endDate);
-
         BigDecimal orderTotal = Optional.ofNullable(orderRepository.sumOrdersInRange(startDate, endDate))
                 .map(BigDecimal::valueOf)
                 .orElse(BigDecimal.ZERO);
@@ -279,21 +271,15 @@ public class OrderService {
         return new OrderRangeStatsDTO(orderCount, orderTotal);
     }
 
+    // Utility methods
     public Optional<Order> getOrderById(Long orderId) {
         return orderRepository.findById(orderId);
     }
 
-    /**
-     * Safely save an existing order with updated items
-     * Used when adjusting quantities after return/replacement
-     */
     @Transactional
     public Order saveOrder(Order order) {
-        // Ensure updatedAt is refreshed
-        order.setUpdatedAt(java.time.LocalDateTime.now());
-
-        // Persist order with updated items (quantities etc.)
+        order.setUpdatedAt(LocalDateTime.now());
         return orderRepository.save(order);
     }
-    
+
 }

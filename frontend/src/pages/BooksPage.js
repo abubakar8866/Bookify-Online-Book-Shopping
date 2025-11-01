@@ -292,9 +292,7 @@ export default function AllBooksPage() {
     setSearchTerm(value);
     setPage(0);
   }
-
-
-
+  
   return (
     <div className="container mt-3 mb-2" style={{ maxWidth: "90vw" }}>
       <div className="d-flex justify-content-between mb-3 mt-2 align-items-center flex-wrap gap-2">

@@ -1,17 +1,24 @@
 import { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { isAuthenticated, getUserRole } from "../utils/auth";
+import { logoutUser } from "../api";
 import "bootstrap-icons/font/bootstrap-icons.css";
 import '../../src/style/leftNav.css';
 
 function LeftNav() {
   const navigate = useNavigate();
   const role = getUserRole();
-  const [isOpen, setIsOpen] = useState(false); 
+  const [isOpen, setIsOpen] = useState(false);
 
-  const handleLogout = () => {
-    localStorage.clear();
-    navigate("/login", { replace: true });
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+    } catch (error) {
+      console.error("Logout failed:", error);
+    } finally {
+      localStorage.clear();
+      navigate("/login", { replace: true });
+    }
   };
 
   const toggleSidebar = () => setIsOpen(!isOpen);
@@ -124,7 +131,7 @@ function LeftNav() {
                 <i className="bi bi-bag-check fs-5"></i> Orders
               </NavLink>
             </li>
-            <li className="nav-item" style={{wordBreak:'break-word'}}>
+            <li className="nav-item" style={{ wordBreak: 'break-word' }}>
               <NavLink className={linkClass} to="/returnReplacement">
                 <i className="bi bi-arrow-counterclockwise fs-5"></i> Orders Issues
               </NavLink>

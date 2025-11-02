@@ -23,7 +23,7 @@ export function setAuthToken(token, role) {
     if (decoded.userId) {
       localStorage.setItem('userId', decoded.userId);
     } else {
-      axios.get(`${API.defaults.baseURL}/auth/email/${decoded.sub}`)
+      API.get(`/auth/email/${decoded.sub}`)
         .then(response => {
           const userId = response.data.userId; 
           localStorage.setItem('userId', userId);
@@ -58,6 +58,28 @@ function sendMultipart(url, data, method = "post") {
     data,
     headers: { "Content-Type": "multipart/form-data" },
   });
+}
+
+// -------------------- AUTH --------------------
+
+// Register a new user
+export function registerUser(name, email, password) {
+  return API.post("/auth/register", { name, email, password });
+}
+
+//login
+export function loginUser(email, password) {
+  return API.post("/auth/login", { email, password });
+}
+
+// Forgot Password (send reset email)
+export function forgotPassword(email) {
+  return API.post(`/auth/forgot-password?email=${email}`);
+}
+
+//logout
+export function logoutUser() {
+  return API.post('/auth/logout');
 }
 
 /* -------------------- PROFILE -------------------- */

@@ -87,20 +87,37 @@ public class AuthController {
                     .stream().map(err -> err.getDefaultMessage()).toList());
         }
 
-        authManager.authenticate(new UsernamePasswordAuthenticationToken(req.getEmail(), req.getPassword()));
+        try {
+            authManager.authenticate(new UsernamePasswordAuthenticationToken(req.getEmail(), req.getPassword()));
 
-        User user = repo.findByEmail(req.getEmail())
-                .orElseThrow(() -> new UserNotFoundException("User not found"));
+            User user = repo.findByEmail(req.getEmail())
+                    .orElseThrow(() -> new UserNotFoundException("User not found"));
 
-        String roleWithoutPrefix = user.getRole().startsWith("ROLE_")
-                ? user.getRole().substring(5)
-                : user.getRole();
+            String roleWithoutPrefix = user.getRole().startsWith("ROLE_")
+                    ? user.getRole().substring(5)
+                    : user.getRole();
 
-        String token = jwtUtils.generateJwtToken(user.getEmail(), roleWithoutPrefix);
+            // Generate token with fresh random key
+            String token = jwtUtils.generateJwtToken(user.getEmail(), roleWithoutPrefix);
 
-        return ResponseEntity.ok(java.util.Map.of(
-                "token", token,
-                "role", user.getRole()));
+            return ResponseEntity.ok(java.util.Map.of(
+                    "token", token,
+                    "role", user.getRole()));
+
+        } catch (UserNotFoundException e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email or password");
+        }
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout() {
+        // Invalidate current JWT signing key — all existing tokens become invalid
+        jwtUtils.invalidateCurrentKey();
+
+        return ResponseEntity.ok(
+                java.util.Map.of("message", "Logged out successfully. Token is now invalid."));
     }
 
     @PostMapping("/register-admin")

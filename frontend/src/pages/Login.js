@@ -1,5 +1,5 @@
 import { useState } from "react";
-import API, { setAuthToken } from "../api";
+import { setAuthToken, loginUser, forgotPassword } from "../api";
 import { useNavigate } from "react-router-dom";
 import "bootstrap-icons/font/bootstrap-icons.css";
 
@@ -13,6 +13,7 @@ export default function Login() {
   const [forgotMsg, setForgotMsg] = useState("");
   const [showForgot, setShowForgot] = useState(false);
   const [sending, setSending] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const nav = useNavigate();
 
@@ -35,15 +36,17 @@ export default function Login() {
     e.preventDefault();
     setErr("");
     setErrors({});
+    setLoading(true);
 
     const frontendErrors = validate();
     if (Object.keys(frontendErrors).length > 0) {
       setErrors(frontendErrors);
+      setLoading(false);
       return;
     }
 
     try {
-      const res = await API.post("/auth/login", { email, password });
+      const res = await loginUser(email, password);
       const { token, role } = res.data;
 
       setAuthToken(token, role);
@@ -61,10 +64,12 @@ export default function Login() {
         });
         setErrors(backendErrors);
       } else if (err.response?.data) {
-        setErr(err.response.data);
+        setErr(err.response.data.message || "Login failed. Please try again.");
       } else {
         setErr("Login failed. Please try again.");
       }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -72,7 +77,7 @@ export default function Login() {
     setForgotMsg("");
     setSending(true);
     try {
-      const res = await API.post(`/auth/forgot-password?email=${forgotEmail}`);
+      const res = await forgotPassword(forgotEmail);
       setForgotMsg(res.data);
     } catch (err) {
       setForgotMsg(err.response?.data || "Failed to send reset email");
@@ -130,9 +135,16 @@ export default function Login() {
             )}
           </div>
 
-
-
-          <button className="btn btn-primary w-100 mt-2 mb-2">Login</button>
+          <button className="btn btn-primary w-100 mt-2 mb-2" disabled={loading}>
+            {loading && (
+              <span
+                className="spinner-border spinner-border-sm me-2"
+                role="status"
+                aria-hidden="true"
+              ></span>
+            )}
+            {loading ? "Logging in..." : "Login"}
+          </button>
 
           <button
             type="button"
@@ -143,6 +155,7 @@ export default function Login() {
               setErrors({});
               setErr("");
             }}
+            disabled={loading}
           >
             Reset
           </button>
@@ -152,11 +165,13 @@ export default function Login() {
             <button
               type="button"
               className="btn btn-link p-0 text-decoration-none"
-              onClick={() => setShowForgot(true)}
+              onClick={() => setShowForgot(true)} 
+              disabled={loading}
             >
               Forgot Password?
             </button>
           </div>
+
         </form>
       </div>
 
@@ -175,6 +190,7 @@ export default function Login() {
                     setForgotMsg("");
                     setForgotEmail("");
                   }}
+                  disabled={sending}
                 ></button>
               </div>
               <div className="modal-body">
@@ -189,17 +205,18 @@ export default function Login() {
                   onChange={(e) => setForgotEmail(e.target.value)}
                 />
               </div>
-              <div className="modal-footer d-flex align-items-center justify-content-center" style={{flexDirection:"column-reverse"}}>
+              <div className="modal-footer d-flex align-items-center justify-content-center" style={{ flexDirection: "column-reverse" }}>
                 <button
                   className="btn btn-secondary w-100"
                   onClick={() => setShowForgot(false)}
+                  disabled={sending}
                 >
                   Close
                 </button>
                 <button
                   className="btn btn-primary d-flex align-items-center justify-content-center w-100"
                   onClick={sendForgotPassword}
-                  disabled={sending}
+                  disabled={sending || !forgotEmail.trim()}
                 >
                   {sending && (
                     <span
@@ -215,6 +232,8 @@ export default function Login() {
           </div>
         </div>
       )}
+
     </div>
   );
+
 }

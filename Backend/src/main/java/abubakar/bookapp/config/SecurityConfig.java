@@ -57,8 +57,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/uploads/**").permitAll()
-                        .requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/email/**").permitAll()
+                        .requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/logout", "/api/auth/email/**","/uploads/**").permitAll()
                         .requestMatchers("/api/auth/profile/**", "/api/auth/books", "/api/auth/authors").authenticated()
                         .requestMatchers("/api/books/**").hasRole("ADMIN")
                         .requestMatchers("/api/authors/**").hasRole("ADMIN")
@@ -75,4 +74,5 @@ public class SecurityConfig {
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }
+
 }

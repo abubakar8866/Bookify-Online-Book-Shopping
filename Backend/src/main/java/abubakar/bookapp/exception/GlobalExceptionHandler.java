@@ -94,6 +94,12 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(ex.getStatusCode()).body(body);
     }
 
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<Map<String, Object>> handleIllegalState(IllegalStateException ex, HttpServletRequest req) {
+        Map<String, Object> body = createErrorBody(HttpStatus.BAD_REQUEST, "Invalid Operation", ex.getMessage(), req);
+        return ResponseEntity.badRequest().body(body);
+    }
+
     // Handle unexpected exceptions
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGenericException(Exception ex, HttpServletRequest req) {
@@ -101,5 +107,5 @@ public class GlobalExceptionHandler {
                 "Unexpected Error", ex.getMessage(), req);
         return ResponseEntity.internalServerError().body(body);
     }
-    
+
 }

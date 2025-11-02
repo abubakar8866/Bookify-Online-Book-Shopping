@@ -715,7 +715,7 @@ export default function AllBooksPage() {
         </div>
       )}
 
-      {/* ✅ Alert Modal */}
+      {/* Alert Modal */}
       <AlertModal
         show={modal.show}
         onHide={() => setModal({ ...modal, show: false })}

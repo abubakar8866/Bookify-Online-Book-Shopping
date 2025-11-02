@@ -1,5 +1,5 @@
 import { useState } from "react";
-import API from "../api";
+import { registerUser } from "../api";
 import { useNavigate } from "react-router-dom";
 import "bootstrap-icons/font/bootstrap-icons.css";
 import '../../src/style/Register.css';
@@ -11,6 +11,7 @@ export default function Register() {
   const [msg, setMsg] = useState("");
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
   const nav = useNavigate();
 
   const validate = () => {
@@ -34,13 +35,17 @@ export default function Register() {
     e.preventDefault();
     setMsg("");
     setErrors({});
+    setLoading(true);
+
     const frontendErrors = validate();
     if (Object.keys(frontendErrors).length > 0) {
       setErrors(frontendErrors);
+      setLoading(false);
       return;
     }
+
     try {
-      await API.post("/auth/register", { name, email, password });
+      await registerUser(name, email, password);  
       setMsg("Registered. Please login.");
       setTimeout(() => nav("/login"), 1000);
     } catch (err) {
@@ -55,6 +60,8 @@ export default function Register() {
       } else {
         setMsg("Something went wrong.");
       }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -115,7 +122,19 @@ export default function Register() {
             )}
           </div>
 
-          <button className="btn btn-success mt-2 w-100">Register</button>
+          <button className="btn btn-success mt-2 w-100" disabled={loading} >
+
+            {loading && (
+              <span
+                className="spinner-border spinner-border-sm me-2"
+                role="status"
+                aria-hidden="true"
+              ></span>
+            )}
+            {loading ? "Registering..." : "Register"}
+
+          </button>
+
           <button
             type="button"
             className="btn btn-outline-secondary mt-2 w-100"
@@ -126,11 +145,14 @@ export default function Register() {
               setErrors({});
               setMsg("");
             }}
+            disabled={loading}
           >
             Reset
           </button>
+          
         </form>
       </div>
     </div>
   );
+
 }

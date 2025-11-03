@@ -22,64 +22,71 @@ function WishlistPage() {
         setWishlistItems(response.data);
       })
       .catch(error => {
-        console.error('Failed to load wishlist:', error);
-        setModal({
-          show: true,
-          title: "Error",
-          message: "Failed to load wishlist. Please try again.",
-          type: "error",
-        });
+        console.error(error);
+        handleError(error, "No books in wishlist.");
       });
   }, [userId, navigate]);
 
-  // Ask for confirmation before removing
-  const confirmRemove = (wishlistId) => {
+  const handleError = (error, fallbackMessage = "Something went wrong. Please try again.") => {
+    let message = fallbackMessage;
+
+    if (error.response && error.response.data) {
+      if (typeof error.response.data === "string") {
+        message = error.response.data;
+      } else if (error.response.data.message) {
+        message = error.response.data.message;
+      }
+    } else if (error.message) {
+      message = error.message;
+    }
+
+    setModal({
+      show: true,
+      title: "Error",
+      message,
+      type: "danger",
+      onConfirm: null
+    });
+  };
+
+  const handleRemove = (wishlistId) => {
     setModal({
       show: true,
       title: "Confirm Remove",
       message: "Are you sure you want to remove this item from your wishlist?",
       type: "warning",
-      onConfirm: () => handleRemove(wishlistId),
+      onConfirm: () => {
+        removeFromWishlist(userId, wishlistId)
+        .then(() => {
+          setWishlistItems(wishlistItems.filter(item => item.id !== wishlistId));
+          setModal({
+            show: true,
+            title: "Removed",
+            message: "Item removed from your wishlist.",
+            type: "success",
+            onConfirm: null,
+          });
+        })
+        .catch(error => {
+          console.error('Failed to remove from wishlist:', error);
+          handleError(error, "Could not remove item from wishlist.");
+        });
+      },
     });
   };
 
-  const handleRemove = (wishlistId) => {
-    removeFromWishlist(userId, wishlistId)
-      .then(() => {
-        setWishlistItems(wishlistItems.filter(item => item.id !== wishlistId));
-        setModal({
-          show: true,
-          title: "Removed",
-          message: "Item removed from your wishlist.",
-          type: "success",
-          onConfirm: null,
-        });
-      })
-      .catch(error => {
-        console.error('Failed to remove from wishlist:', error);
-        setModal({
-          show: true,
-          title: "Error",
-          message: "Could not remove item from wishlist.",
-          type: "error",
-          onConfirm: null,
-        });
-      });
-  };
-
-
   return (
-    <div className="container mt-4">
+    <div className="container mt-4" style={{overflowX:'hidden'}}>
       <h2 className="mb-4 text-primary fw-bold">Your Wishlist</h2>
 
       {wishlistItems.length === 0 ? (
         <p className="text-muted text-center">No items in wishlist.</p>
       ) : (
-        <div style={{ maxHeight: '70vh', overflowY: 'auto' }} className="row g-3">
+        <div style={{ maxHeight: '80vh', overflowY: 'auto' }} className="row g-3">
           {wishlistItems.map(item => (
             <div key={item.id} className="col-md-6 col-lg-4">
-              <div className="card shadow-sm h-100 hover-shadow border-1">
-                <div className="d-flex align-items-center p-3">
+              <div className="card shadow-sm h-100 hover-shadow border-1 d-flex p-2" style={{flexDirection:'column'}}>
+                <div className="d-flex align-items-center justify-content-center p-3">
                   <img
                     src={item.book.imageUrl}
                     alt={item.book.name}
@@ -88,14 +95,14 @@ function WishlistPage() {
                     onError={e => e.target.src = '/placeholder.jpg'}
                   />
                   <div className="flex-grow-1">
-                    <h6 className="mb-1 fw-semibold">{item.book.name}</h6>
+                    <h6 className="mb-1 fw-semibold" style={{wordBreak:'break-all'}}>{item.book.name}</h6>
                     <p className="mb-0 text-muted">₹{item.book.price}</p>
                   </div>
                 </div>
-                <div className="card-footer bg-transparent border-0 d-flex justify-content-end">
+                <div className="card-footer bg-transparent border-0 d-flex justify-content-end align-items-center">
                   <button
                     className="btn btn-sm btn-outline-danger"
-                    onClick={() => confirmRemove(item.id)}
+                    onClick={() => handleRemove(item.id)}
                   >
                     <i className="bi bi-trash me-1"></i> Remove
                   </button>
@@ -106,7 +113,7 @@ function WishlistPage() {
         </div>
       )}
 
-      {/* 👇 Modal with confirm support */}
+      {/* Modal with confirm support */}
       <AlertModal
         show={modal.show}
         onHide={() => setModal({ ...modal, show: false })}

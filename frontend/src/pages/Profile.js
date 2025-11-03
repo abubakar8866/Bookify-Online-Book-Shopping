@@ -9,17 +9,17 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
 import '../../src/style/All.css';
 
-function Profile() {
-  const userId = localStorage.getItem("userId");
-  const [profile, setProfile] = useState({
-    name: "",
-    email: "",
-    password: null,
-    gender: "male",
-    address: "",
-    favouriteBook: "",
-    favouriteAuthor: "",
-    imageUrl: "",
+  function Profile() {
+    const userId = localStorage.getItem("userId");
+    const [profile, setProfile] = useState({
+      name: "",
+      email: "",
+      password: null,
+      gender: "male",
+      address: "",
+      favouriteBook: "",
+      favouriteAuthor: "",
+      imageUrl: "",
   });
 
   const [file, setFile] = useState(null);
@@ -167,7 +167,7 @@ function Profile() {
                 <img
                   src={
                     profile.imageUrl &&
-                    profile.imageUrl.startsWith("http://localhost:8080")
+                      profile.imageUrl.startsWith("http://localhost:8080")
                       ? `${profile.imageUrl}`
                       : profile.imageUrl || dummyImage
                   }

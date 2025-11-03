@@ -12,7 +12,7 @@ export default function BooksPage() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
-  const [selectedBook, setSelectedBook] = useState(null); // for modal
+  const [selectedBook, setSelectedBook] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const nav = useNavigate();
   const [modal, setModal] = useState({
@@ -72,6 +72,7 @@ export default function BooksPage() {
     } catch (e) {
       if (e.response?.status === 401) nav('/login');
       console.error("Failed to fetch books", e);
+      handleError(e,"Failed to fetch books");
     } finally {
       setLoading(false);
     }
@@ -89,6 +90,7 @@ export default function BooksPage() {
         setTotalPages(0);
       } else {
         console.error("Search error:", err);
+        handleError(err,"Error occur inside search operation.");
       }
     } finally {
       setLoading(false);

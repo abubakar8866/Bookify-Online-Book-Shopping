@@ -84,6 +84,7 @@ export default function AuthorsPage() {
       setTotalPages(res.data.totalPages);
     } catch (err) {
       console.error("Error fetching authors:", err);
+      handleError(err,"Error occur in fetching authors.");
     } finally {
       setLoading(false);
     }
@@ -101,6 +102,7 @@ export default function AuthorsPage() {
         setTotalPages(0);
       } else {
         console.error("Search error:", err);
+        handleError(err,"Error occur while searching.");
       }
     } finally {
       setLoading(false);

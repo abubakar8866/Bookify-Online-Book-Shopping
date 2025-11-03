@@ -3,18 +3,52 @@ import { getAllUser, getAllCartItems, getAllWishListItems } from "../api";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
 import '../../src/style/All.css';
+import AlertModal from '../components/AlertModal';
 
 const InformationPage = () => {
   const [users, setUsers] = useState([]);
   const [carts, setCarts] = useState([]);
   const [wishlists, setWishlists] = useState([]);
   const [activeTab, setActiveTab] = useState("users");
+  const [modal, setModal] = useState({ show: false, title: "", message: "", type: "info" });
+
 
   useEffect(() => {
-    getAllUser().then((res) => setUsers(res.data)).catch(console.error);
-    getAllCartItems().then((res) => setCarts(res.data)).catch(console.error);
-    getAllWishListItems().then((res) => setWishlists(res.data)).catch(console.error);
+    getAllUser().then((res) => setUsers(res.data)).catch(error => {
+        console.error(error);
+        handleError(error, "No users in found.");
+      });
+    getAllCartItems().then((res) => setCarts(res.data)).catch(error => {
+        console.error(error);
+        handleError(error, "No books in cart.");
+      });
+    getAllWishListItems().then((res) => setWishlists(res.data)).catch(error => {
+        console.error(error);
+        handleError(error, "No books in wishlist.");
+      });
   }, []);
+
+  const handleError = (error, fallbackMessage = "Something went wrong. Please try again.") => {
+    let message = fallbackMessage;
+
+    if (error.response && error.response.data) {
+      if (typeof error.response.data === "string") {
+        message = error.response.data;
+      } else if (error.response.data.message) {
+        message = error.response.data.message;
+      }
+    } else if (error.message) {
+      message = error.message;
+    }
+
+    setModal({
+      show: true,
+      title: "Error",
+      message,
+      type: "danger",
+      onConfirm: null
+    });
+  };
 
   const renderTable = () => {
     if (activeTab === "users") {
@@ -90,6 +124,7 @@ const InformationPage = () => {
   };
 
   return (
+
     <div className="container mt-4">
       <h2 className="fw-bold text-center mb-4">
         <i className="bi bi-info-circle-fill text-primary"></i> Information Page
@@ -125,8 +160,21 @@ const InformationPage = () => {
 
       {/* Table */}
       <div className="table-responsive" style={{  maxHeight: '100vh', overflowY: 'auto', maxWidth:'90vw' }}>{renderTable()}</div>
+
+      {/* Modal with confirm support */}
+      <AlertModal
+        show={modal.show}
+        onHide={() => setModal({ ...modal, show: false })}
+        title={modal.title}
+        message={modal.message}
+        type={modal.type}
+        onConfirm={modal.onConfirm}
+      />
+
     </div>
+
   );
+
 };
 
 export default InformationPage;

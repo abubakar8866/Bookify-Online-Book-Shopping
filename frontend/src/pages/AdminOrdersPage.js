@@ -3,11 +3,13 @@ import { getAllOrders, updateOrderStatus, getAllDetailsofRazorpay } from '../api
 import { useNavigate } from 'react-router-dom';
 import '../style/OrderTable.css';
 import '../../src/style/All.css';
+import AlertModal from '../components/AlertModal';
 
 function AdminOrderPage() {
     const [orders, setOrders] = useState([]);
     const navigate = useNavigate();
     const [razorpayInfoMap, setRazorpayInfoMap] = useState({});
+    const [modal, setModal] = useState({ show: false, title: "", message: "", type: "info" });
 
     const role = localStorage.getItem("role");
 
@@ -31,12 +33,37 @@ function AdminOrderPage() {
                             .then(infoRes => {
                                 setRazorpayInfoMap(prev => ({ ...prev, [order.id]: infoRes.data }));
                             })
-                            .catch(err => console.error(`Failed to fetch Razorpay info for order ${order.id}:`, err));
+                            .catch(error => {
+                                console.error(error);
+                                handleError(error, "Failed to fetch razerPay Info.");
+                            });
                     }
                 });
             })
             .catch(err => console.error("Failed to load orders:", err));
     }, [navigate, role]);
+
+    const handleError = (error, fallbackMessage = "Something went wrong. Please try again.") => {
+        let message = fallbackMessage;
+
+        if (error.response && error.response.data) {
+            if (typeof error.response.data === "string") {
+                message = error.response.data;
+            } else if (error.response.data.message) {
+                message = error.response.data.message;
+            }
+        } else if (error.message) {
+            message = error.message;
+        }
+
+        setModal({
+            show: true,
+            title: "Error",
+            message,
+            type: "danger",
+            onConfirm: null
+        });
+    };
 
     const handleStatusChange = (orderId, newStatus) => {
         updateOrderStatus(orderId, newStatus)
@@ -47,7 +74,10 @@ function AdminOrderPage() {
                     )
                 );
             })
-            .catch(err => console.error("Failed to update order status:", err));
+            .catch(error => {
+                console.error(error);
+                handleError(error, "Failed to update order status.");
+            });
     };
 
     const groupOrdersByTime = (orders) => {
@@ -85,7 +115,7 @@ function AdminOrderPage() {
             {orders.length === 0 ? (
                 <p className="text-muted text-center">No orders found.</p>
             ) : (
-                <div style={{  maxHeight: '100vh', overflowY: 'auto', maxWidth:'90vw', overflowX:"hidden" }}>
+                <div style={{ maxHeight: '100vh', overflowY: 'auto', maxWidth: '90vw', overflowX: "hidden" }}>
                     {Object.entries(groupedOrders).map(([time, batch], batchIndex) => {
                         const { id, userName, orderMode, orderStatus, address, phoneNumber, deliveryDate } = batch[0];
 
@@ -184,6 +214,17 @@ function AdminOrderPage() {
                     })}
                 </div>
             )}
+
+            {/* Modal with confirm support */}
+            <AlertModal
+                show={modal.show}
+                onHide={() => setModal({ ...modal, show: false })}
+                title={modal.title}
+                message={modal.message}
+                type={modal.type}
+                onConfirm={modal.onConfirm}
+            />
+
         </div>
     );
 }

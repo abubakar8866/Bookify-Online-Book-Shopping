@@ -66,6 +66,7 @@ export default function Register() {
   };
 
   return (
+
     <div className="d-flex align-items-center justify-content-center reg" style={{height:"90vh"}}>
       <div className="card shadow-lg p-4" style={{ width: "100%", maxWidth: 450 }}>
         <div className="text-center mb-4">
@@ -153,6 +154,7 @@ export default function Register() {
         </form>
       </div>
     </div>
+    
   );
 
 }

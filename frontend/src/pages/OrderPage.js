@@ -90,7 +90,11 @@ function OrderPage() {
           }
         });
       })
-      .catch(err => console.error("Failed to load orders:", err));
+      .catch(error => {
+        console.error(error);
+        handleError(error, "No books in order.");
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, navigate, returnModal.visible, returnModal.order?.id]);
 
   const handleError = (error, fallbackMessage = "Something went wrong. Please try again.") => {
@@ -244,7 +248,6 @@ function OrderPage() {
         handleError(err, "Failed to update the order.");
       });
   };
-
 
   const groupOrdersByTime = (orders) => {
     return orders.reduce((groups, order) => {
@@ -463,10 +466,10 @@ function OrderPage() {
     const { userName, orderMode, orderStatus, address, phoneNumber, deliveryDate, id } = batch[0];
 
     try {
-      // ✅ Call backend validation
+      // Call backend validation
       await printOrder(id, orderStatus);
 
-      // ✅ If backend allows, continue local print
+      // If backend allows, continue local print
       const grandTotal = getBatchTotal(batch);
       const subtotal = grandTotal / 1.05;
       const gstAmount = grandTotal - subtotal;
@@ -575,7 +578,7 @@ function OrderPage() {
         setTimeout(() => document.body.removeChild(iframe), 1000);
       };
     } catch (err) {
-      handleError(err,"Failed to print order.");
+      handleError(err, "Failed to print order.");
     }
   };
 

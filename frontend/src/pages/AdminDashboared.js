@@ -8,6 +8,7 @@ import {
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
 import '../../src/style/All.css';
+import AlertModal from '../components/AlertModal';
 
 function AdminDashboard() {
   const [stats, setStats] = useState(null);
@@ -17,10 +18,34 @@ function AdminDashboard() {
     startDate: "",
     endDate: "",
   });
+  const [modal, setModal] = useState({ show: false, title: "", message: "", type: "info" });
 
   useEffect(() => {
     loadDashboardStats();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const handleError = (error, fallbackMessage = "Something went wrong. Please try again.") => {
+    let message = fallbackMessage;
+
+    if (error.response && error.response.data) {
+      if (typeof error.response.data === "string") {
+        message = error.response.data;
+      } else if (error.response.data.message) {
+        message = error.response.data.message;
+      }
+    } else if (error.message) {
+      message = error.message;
+    }
+
+    setModal({
+      show: true,
+      title: "Error",
+      message,
+      type: "danger",
+      onConfirm: null
+    });
+  };
 
   const loadDashboardStats = async () => {
     setLoading(true);
@@ -28,7 +53,8 @@ function AdminDashboard() {
       const res = await getAdminOrderStats();
       setStats(res.data);
     } catch (error) {
-      console.error("Failed to load stats", error);
+      console.error(error);
+      handleError(error,"Failed to load stats.");
     } finally {
       setLoading(false);
     }
@@ -39,7 +65,8 @@ function AdminDashboard() {
       const res = await getWeeklyOrderStats();
       setRangeStats(res.data);
     } catch (error) {
-      console.error("Failed to load weekly stats", error);
+      console.error(error);
+      handleError(error,"Failed to load weekly stats.");
     }
   };
 
@@ -48,7 +75,8 @@ function AdminDashboard() {
       const res = await getMonthlyOrderStats();
       setRangeStats(res.data);
     } catch (error) {
-      console.error("Failed to load monthly stats", error);
+      console.error(error);
+      handleError(error,"Failed to load monthly stats.");
     }
   };
 
@@ -61,7 +89,8 @@ function AdminDashboard() {
       });
       setRangeStats(res.data);
     } catch (error) {
-      console.error("Failed to load custom range stats", error);
+      console.error(error);
+      handleError(error,"Failed to load range stats.");
     }
   };
 
@@ -72,7 +101,7 @@ function AdminDashboard() {
   };
 
   return (
-    <div className="container py-3" style={{overflow:"hidden",maxWidth:"90vw"}}>
+    <div className="container py-3" style={{ overflow: "hidden", maxWidth: "90vw" }}>
       <h2 className="mb-4 fw-bold text-primary" >
         <i className="bi bi-speedometer2 me-2"></i> Admin Dashboard
       </h2>
@@ -84,6 +113,7 @@ function AdminDashboard() {
         </div>
       ) : stats ? (
         <>
+
           {/* Dashboard Cards */}
           <div className="row mb-4 g-3">
             <div className="col-md-3">
@@ -192,13 +222,12 @@ function AdminDashboard() {
                         <td>₹{safeToFixed(order.total ?? order.totalAmount)}</td>
                         <td>
                           <span
-                            className={`badge ${
-                              order.orderStatus === "Delivered"
-                                ? "bg-success"
-                                : order.orderStatus === "Cancelled"
+                            className={`badge ${order.orderStatus === "Delivered"
+                              ? "bg-success"
+                              : order.orderStatus === "Cancelled"
                                 ? "bg-danger"
                                 : "bg-warning text-dark"
-                            }`}
+                              }`}
                           >
                             {order.orderStatus ?? "N/A"}
                           </span>
@@ -217,10 +246,22 @@ function AdminDashboard() {
               </table>
             </div>
           </div>
+
         </>
       ) : (
         <div className="text-center">No stats available</div>
       )}
+
+      {/* Modal with confirm support */}
+      <AlertModal
+        show={modal.show}
+        onHide={() => setModal({ ...modal, show: false })}
+        title={modal.title}
+        message={modal.message}
+        type={modal.type}
+        onConfirm={modal.onConfirm}
+      />
+
     </div>
   );
 }

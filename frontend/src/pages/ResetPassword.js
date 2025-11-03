@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import API from "../api";
+import {resetPassword} from "../api";
 import '../../src/style/All.css';
 
 export default function ResetPassword() {
@@ -46,14 +46,13 @@ export default function ResetPassword() {
     }
 
     try {
-      const res = await API.post(
-        `/auth/reset-password?token=${token}&newPassword=${password}`
-      );
-      setMsg(res.data); // backend returns success message
-      setTimeout(() => nav("/login"), 2000); // redirect to login after 2s
+      const res = await resetPassword(token,password);
+      setMsg(res.data);
+      setTimeout(() => nav("/login"), 2000);
     } catch (err) {
       setMsg(err.response?.data || "Failed to reset password");
     }
+
   };
 
   const handleReset = () => {
@@ -128,6 +127,7 @@ export default function ResetPassword() {
           </button>
         </div>
       </form>
+      
     </div>
   );
 }

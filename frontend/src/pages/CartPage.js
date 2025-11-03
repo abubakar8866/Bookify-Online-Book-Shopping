@@ -26,7 +26,10 @@ function CartPage() {
 
     getUserNameByUserId(userId)
       .then(response => setUserName(response.data))
-      .catch(error => console.error('Failed to load username:', error));
+      .catch(error => {
+        console.error(error);
+        handleError(error, "Failed to fetch username.");
+      });
 
     getCart(userId)
       .then(response => {
@@ -36,42 +39,58 @@ function CartPage() {
         }));
         setCartItems(itemsWithQuantity);
       })
-      .catch(error => console.error('Failed to load cart:', error));
+      .catch(error => {
+        console.error(error);
+        handleError(error, "Failed to load cart.");
+      });
   }, [userId, navigate]);
 
-  // Ask for confirmation before removing
-  const confirmRemove = (cartId) => {
+  const handleError = (error, fallbackMessage = "Something went wrong. Please try again.") => {
+    let message = fallbackMessage;
+
+    if (error.response && error.response.data) {
+      if (typeof error.response.data === "string") {
+        message = error.response.data;
+      } else if (error.response.data.message) {
+        message = error.response.data.message;
+      }
+    } else if (error.message) {
+      message = error.message;
+    }
+
+    setModal({
+      show: true,
+      title: "Error",
+      message,
+      type: "danger",
+      onConfirm: null
+    });
+  };
+
+  const handleRemove = (cartId) => {
     setModal({
       show: true,
       title: "Confirm Remove",
       message: "Are you sure you want to remove this item from your cart?",
       type: "warning",
-      onConfirm: () => handleRemove(cartId),
+      onConfirm: () => {
+        removeFromCart(userId, cartId)
+          .then(() => {
+            setCartItems(cartItems.filter(item => item.id !== cartId));
+            setModal({
+              show: true,
+              title: "Removed",
+              message: "Item removed from your cart.",
+              type: "success",
+              onConfirm: null,
+            });
+          })
+          .catch(error => {
+            console.error('Failed to remove from cart:', error);
+            handleError(error,"Could not remove item from cart.");
+          });
+      },
     });
-  };
-
-  const handleRemove = (cartId) => {
-    removeFromCart(userId, cartId)
-      .then(() => {
-        setCartItems(cartItems.filter(item => item.id !== cartId));
-        setModal({
-          show: true,
-          title: "Removed",
-          message: "Item removed from your cart.",
-          type: "success",
-          onConfirm: null,
-        });
-      })
-      .catch(error => {
-        console.error('Failed to remove from cart:', error);
-        setModal({
-          show: true,
-          title: "Error",
-          message: "Could not remove item from cart.",
-          type: "error",
-          onConfirm: null,
-        });
-      });
   };
 
   const updateQuantity = (cartId, change) => {
@@ -175,13 +194,7 @@ function CartPage() {
               }
             } catch (err) {
               console.error('Payment verification failed:', err);
-              setModal({
-                show: true,
-                title: "Payment Error",
-                message: "An error occurred during payment verification.",
-                type: "error",
-                onConfirm: null,
-              });
+              handleError(err,"An error occurred during payment verification.");
             }
           },
           prefill: { name: userName, contact: phoneNumber },
@@ -208,22 +221,18 @@ function CartPage() {
 
     } catch (error) {
       console.error('Order placement failed:', error);
-      setModal({
-        show: true,
-        title: "Error",
-        message: "Failed to place order. Please try again.",
-        type: "error",
-        onConfirm: null,
-      });
+      handleError(error,"Failed to place order. Please try again.");
     }
   };
 
 
   return (
     <div className="container mt-4 px-2 px-sm-3 px-md-4 overflow-x-hidden">
+
       <h2 className="mb-4 text-center text-primary fw-bold">Your Cart</h2>
+
       <div className="row g-4 align-items-start">
-        {/* 🧾 Order Summary (right side on desktop, top on mobile) */}
+        {/* Order Summary (right side on desktop, top on mobile) */}
         <div className="col-12 col-lg-4">
           <div
             className="card p-4 shadow-sm rounded"
@@ -242,7 +251,7 @@ function CartPage() {
           </div>
         </div>
 
-        {/* 🛒 Cart Items (left side on desktop, bottom on mobile) */}
+        {/* Cart Items (left side on desktop, bottom on mobile) */}
         <div className="col-12 col-lg-8">
           <div className="p-2" style={{ maxHeight: "80vh", overflowY: "auto" }}>
             {cartItems.length === 0 ? (
@@ -262,7 +271,7 @@ function CartPage() {
                           onError={e => (e.target.src = "/placeholder.jpg")}
                         />
                         <div>
-                          <h6 className="mb-1 fw-semibold" style={{wordBreak:'break-all'}}>{item.book.name}</h6>
+                          <h6 className="mb-1 fw-semibold" style={{ wordBreak: 'break-all' }}>{item.book.name}</h6>
                           <small className="text-muted">Price: ₹{item.book.price}</small><br />
                           <small className="text-muted">Stock: {item.book.quantity}</small>
                         </div>
@@ -278,7 +287,7 @@ function CartPage() {
                       {/* Remove Button */}
                       <button
                         className="btn btn-outline-danger btn-sm mt-2 mt-sm-0 mx-2"
-                        onClick={() => confirmRemove(item.id)}
+                        onClick={() => handleRemove(item.id)}
                       >
                         <i className="bi bi-trash"></i>
                       </button>

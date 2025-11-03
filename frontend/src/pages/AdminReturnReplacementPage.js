@@ -13,7 +13,7 @@ export default function AdminReturnReplacementPage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
-    const [alert, setAlert] = useState({
+    const [modal, setModal] = useState({
         show: false,
         title: "",
         message: "",
@@ -26,6 +26,28 @@ export default function AdminReturnReplacementPage() {
     useEffect(() => {
         fetchRequests(statusFilter);
     }, [statusFilter]);
+
+    const handleError = (error, fallbackMessage = "Something went wrong. Please try again.") => {
+        let message = fallbackMessage;
+
+        if (error.response && error.response.data) {
+            if (typeof error.response.data === "string") {
+                message = error.response.data;
+            } else if (error.response.data.message) {
+                message = error.response.data.message;
+            }
+        } else if (error.message) {
+            message = error.message;
+        }
+
+        setModal({
+            show: true,
+            title: "Error",
+            message,
+            type: "danger",
+            onConfirm: null
+        });
+    };
 
     async function fetchRequests(status = statusFilter) {
         setLoading(true);
@@ -41,13 +63,10 @@ export default function AdminReturnReplacementPage() {
         } catch (e) {
             console.error(e);
             setError("Failed to load requests.");
+            handleError(e,'Failed to load request.');
         } finally {
             setLoading(false);
         }
-    }
-
-    function openAlert(title, message, type, onConfirm) {
-        setAlert({ show: true, title, message, type, onConfirm });
     }
 
     function openDetails(rr) {
@@ -67,7 +86,7 @@ export default function AdminReturnReplacementPage() {
     }
 
     async function handleStatusUpdate(rr, status) {
-        openAlert(
+        setModal(
             `${status} Request`,
             `Are you sure you want to set this request to ${status}?`,
             "warning",
@@ -75,17 +94,17 @@ export default function AdminReturnReplacementPage() {
                 try {
                     await updateReturnRequestStatus(rr.id, status);
                     await fetchRequests();
-                    setAlert({ show: true, title: "Success", message: `Request marked as ${status}.`, type: "success" });
+                    setModal({ show: true, title: "Success", message: `Request marked as ${status}.`, type: "success" });
                 } catch (e) {
                     console.error(e);
-                    setAlert({ show: true, title: "Error", message: "Failed to update status.", type: "danger" });
+                    handleError(e,"Failed to update status.");
                 }
             }
         );
     }
 
     async function handleRefund(rr) {
-        openAlert(
+        setModal(
             "Refund Request",
             `Refund ₹${(rr.refundedAmount || 0).toFixed(2)} for this request? (calculated from order)`,
             "warning",
@@ -93,21 +112,10 @@ export default function AdminReturnReplacementPage() {
                 try {
                     await refundReturnRequest(rr.id);
                     await fetchRequests();
-                    setAlert({ show: true, title: "Refunded", message: "Refund processed successfully done.", type: "success" });
+                    setModal({ show: true, title: "Refunded", message: "Refund processed successfully done.", type: "success" });
                 } catch (e) {
                     console.error(e);
-                    // Extract backend message (Spring returns in err.response.data.error or message)
-                    const backendMessage =
-                        e.response?.data?.error ||
-                        e.response?.data?.message ||
-                        "Refund failed.";
-
-                    setAlert({
-                        show: true,
-                        title: "Refund",
-                        message: backendMessage,
-                        type: "error",
-                    });
+                    handleError(e,"Error occur while processing your refund request.");
                 }
             }
         );
@@ -338,12 +346,12 @@ export default function AdminReturnReplacementPage() {
 
             {/* Alert Modal */}
             <AlertModal
-                show={alert.show}
-                onHide={() => setAlert({ ...alert, show: false })}
-                title={alert.title}
-                message={alert.message}
-                type={alert.type}
-                onConfirm={alert.onConfirm}
+                show={modal.show}
+                onHide={() => setModal({ ...modal, show: false })}
+                title={modal.title}
+                message={modal.message}
+                type={modal.type}
+                onConfirm={modal.onConfirm}
             />
 
         </div>

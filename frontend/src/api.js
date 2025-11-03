@@ -77,6 +77,11 @@ export function forgotPassword(email) {
   return API.post(`/auth/forgot-password?email=${email}`);
 }
 
+//Reset Password
+export function resetPassword(token, newPassword){
+  return API.post(`/auth/reset-password?token=${token}&newPassword=${newPassword}`);
+}
+
 //logout
 export function logoutUser() {
   return API.post('/auth/logout');

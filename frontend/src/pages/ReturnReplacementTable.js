@@ -18,7 +18,7 @@ const ReturnReplacementTable = () => {
     newImages: [],
   });
   const [errors, setErrors] = useState({});
-  const [alert, setAlert] = useState({
+  const [modal, setModal] = useState({
     show: false,
     title: "",
     message: "",
@@ -33,12 +33,35 @@ const ReturnReplacementTable = () => {
     fetchRequests();
   }, []);
 
+  const handleError = (error, fallbackMessage = "Something went wrong. Please try again.") => {
+    let message = fallbackMessage;
+
+    if (error.response && error.response.data) {
+      if (typeof error.response.data === "string") {
+        message = error.response.data;
+      } else if (error.response.data.message) {
+        message = error.response.data.message;
+      }
+    } else if (error.message) {
+      message = error.message;
+    }
+
+    setModal({
+      show: true,
+      title: "Error",
+      message,
+      type: "danger",
+      onConfirm: null
+    });
+  };
+
   const fetchRequests = async () => {
     try {
       const res = await getUserReturnRequests(userId);
       setRequests((res.data || []).slice().reverse());
     } catch (err) {
-      console.error("Failed to fetch return/replacement requests:", err);
+      console.error(err);
+      handleError(err,"No return/Replacement request.");
     }
   };
 
@@ -141,7 +164,7 @@ const ReturnReplacementTable = () => {
 
     try {
       await editReturnReplacementRequest(editing.id, data);
-      setAlert({
+      setModal({
         show: true,
         title: "Success",
         message: "Request updated successfully!",
@@ -151,26 +174,13 @@ const ReturnReplacementTable = () => {
       fetchRequests(); // refresh table
     } catch (err) {
       console.error(err);
-
-      // Extract backend message (Spring returns in err.response.data.error or message)
-      const backendMessage =
-        err.response?.data?.error ||
-        err.response?.data?.message ||
-        "Failed to delete request.";
-
-      setAlert({
-        show: true,
-        title: "Error",
-        message: backendMessage,
-        type: "error",
-      });
-
+      handleError(err,'Failed update request.');
     }
   };
 
   // ---------------- Delete Handler ----------------
   const handleDeleteRequest = (requestId) => {
-    setAlert({
+    setModal({
       show: true,
       title: "Confirm Deletion",
       message: "Are you sure you want to delete this request?",
@@ -179,7 +189,7 @@ const ReturnReplacementTable = () => {
         try {
           await deleteReturnReplacementRequest(requestId);
 
-          setAlert({
+          setModal({
             show: true,
             title: "Deleted",
             message: "Your request was deleted successfully.",
@@ -189,25 +199,11 @@ const ReturnReplacementTable = () => {
           fetchRequests(); // refresh table
         } catch (err) {
           console.error("Delete error:", err);
-
-          // Extract backend message (Spring returns in err.response.data.error or message)
-          const backendMessage =
-            err.response?.data?.error ||
-            err.response?.data?.message ||
-            "Failed to delete request.";
-
-          setAlert({
-            show: true,
-            title: "Error",
-            message: backendMessage,
-            type: "error",
-          });
+          handleError(err,'Failed to delete request.');
         }
       },
     });
   };
-
-
 
   return (
     <div className="container my-4">
@@ -281,11 +277,11 @@ const ReturnReplacementTable = () => {
 
               <div className="d-flex justify-content-end mt-2">
                 {(() => {
-                  const lockedStatuses = ["APPROVED", "RETURNED", "REPLACED", "REFUNDED" , "REJECTED"];
+                  const lockedStatuses = ["APPROVED", "RETURNED", "REPLACED", "REFUNDED", "REJECTED"];
                   const isLocked = lockedStatuses.includes(req.status?.toUpperCase());
 
                   const handleLockedAction = (action) => {
-                    setAlert({
+                    setModal({
                       show: true,
                       title: "Action Not Allowed",
                       message: `You cannot ${action} a request that is already ${req.status.toLowerCase()}.`,
@@ -547,12 +543,12 @@ const ReturnReplacementTable = () => {
 
       {/* Alert Modal */}
       <AlertModal
-        show={alert.show}
-        onHide={() => setAlert({ ...alert, show: false })}
-        title={alert.title}
-        message={alert.message}
-        type={alert.type}
-        onConfirm={alert.onConfirm}
+        show={modal.show}
+        onHide={() => setModal({ ...modal, show: false })}
+        title={modal.title}
+        message={modal.message}
+        type={modal.type}
+        onConfirm={modal.onConfirm}
       />
 
     </div>

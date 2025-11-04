@@ -25,6 +25,7 @@ export default function AdminReturnReplacementPage() {
 
     useEffect(() => {
         fetchRequests(statusFilter);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [statusFilter]);
 
     const handleError = (error, fallbackMessage = "Something went wrong. Please try again.") => {
@@ -63,7 +64,7 @@ export default function AdminReturnReplacementPage() {
         } catch (e) {
             console.error(e);
             setError("Failed to load requests.");
-            handleError(e,'Failed to load request.');
+            handleError(e, 'Failed to load request.');
         } finally {
             setLoading(false);
         }
@@ -86,39 +87,41 @@ export default function AdminReturnReplacementPage() {
     }
 
     async function handleStatusUpdate(rr, status) {
-        setModal(
-            `${status} Request`,
-            `Are you sure you want to set this request to ${status}?`,
-            "warning",
-            async () => {
+        setModal({
+            show: true,
+            title: `${status} Request`,
+            message: `Are you sure you want to set this request to ${status}?`,
+            type: "warning",
+            onConfirm: async () => {
                 try {
                     await updateReturnRequestStatus(rr.id, status);
                     await fetchRequests();
                     setModal({ show: true, title: "Success", message: `Request marked as ${status}.`, type: "success" });
                 } catch (e) {
                     console.error(e);
-                    handleError(e,"Failed to update status.");
+                    handleError(e, "Failed to update status.");
                 }
             }
-        );
+        });
     }
 
     async function handleRefund(rr) {
-        setModal(
-            "Refund Request",
-            `Refund ₹${(rr.refundedAmount || 0).toFixed(2)} for this request? (calculated from order)`,
-            "warning",
-            async () => {
+        setModal({
+            show: true,
+            title: "Refund Request",
+            message: `Refund ₹${(rr.refundedAmount || 0).toFixed(2)} for this request? (calculated from order)`,
+            type: "warning",
+            onConfirm: async () => {
                 try {
                     await refundReturnRequest(rr.id);
                     await fetchRequests();
                     setModal({ show: true, title: "Refunded", message: "Refund processed successfully done.", type: "success" });
                 } catch (e) {
                     console.error(e);
-                    handleError(e,"Error occur while processing your refund request.");
+                    handleError(e, "Error occur while processing your refund request.");
                 }
             }
-        );
+        });
     }
 
     function statusBadge(status) {
@@ -137,6 +140,7 @@ export default function AdminReturnReplacementPage() {
 
     return (
         <div className="container my-4">
+            
             <div className="d-flex justify-content-between align-items-center flex-wrap mb-3 gap-2">
                 <h3 className="mb-0">Returns &amp; Replacements</h3>
                 <div className="d-flex gap-2 align-items-center">

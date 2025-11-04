@@ -81,12 +81,16 @@ public class WishlistService {
 
     // Delete all wishlist items for a book
     public void deleteAllByBook(Book book) {
-        try {
-            List<Wishlist> wishlists = wishlistRepository.findByBookId(book.getId());
-            wishlistRepository.deleteAll(wishlists);
-        } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to delete wishlists for book");
+
+        if (book == null || book.getId() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Book details are required.");
         }
+
+        List<Wishlist> wishlists = wishlistRepository.findByBookId(book.getId());
+        if (!wishlists.isEmpty()) {
+            wishlistRepository.deleteAll(wishlists);
+        }
+        
     }
 
     // Get all wishlists for a book (admin)

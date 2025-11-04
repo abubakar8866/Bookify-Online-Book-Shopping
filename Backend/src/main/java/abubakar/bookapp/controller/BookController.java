@@ -171,12 +171,12 @@ public class BookController {
             Book existing = bookRepo.findById(id)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Book not found"));
 
+            wishlistService.deleteAllByBook(existing);
+            cartService.deleteAllByBook(existing);
+
             if (existing.getImageUrl() != null) {
                 fileStorageService.delete(existing.getImageUrl());
             }
-
-            wishlistService.deleteAllByBook(existing);
-            cartService.deleteAllByBook(existing);
 
             bookRepo.deleteById(id);
             return ResponseEntity.noContent().build();

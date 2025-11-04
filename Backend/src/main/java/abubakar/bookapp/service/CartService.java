@@ -22,7 +22,7 @@ public class CartService {
     @Autowired
     private UserRepository userRepository;
 
-    //Add to cart with exception safety
+    // Add to cart with exception safety
     public Cart addToCart(Cart cart) {
         if (cart == null || cart.getUser() == null || cart.getBook() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid cart details.");
@@ -54,7 +54,7 @@ public class CartService {
         }
     }
 
-    //Get all items in user's cart
+    // Get all items in user's cart
     public List<Cart> getUserCart(Long userId) {
         if (userId == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User ID cannot be null.");
@@ -68,7 +68,7 @@ public class CartService {
         return carts;
     }
 
-    //Get user name safely
+    // Get user name safely
     public String getUserNameByUserId(Long userId) {
         if (userId == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User ID cannot be null.");
@@ -80,7 +80,7 @@ public class CartService {
         return user.getName();
     }
 
-    //Remove specific item from user's cart
+    // Remove specific item from user's cart
     public void removeFromCart(Long cartId, Long userId) {
         if (cartId == null || userId == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cart ID and User ID are required.");
@@ -98,21 +98,19 @@ public class CartService {
         }
     }
 
-    //Delete all cart items for a specific book
+    // Delete all cart items for a specific book
     public void deleteAllByBook(Book book) {
         if (book == null || book.getId() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Book details are required.");
         }
 
         List<Cart> cartItems = cartRepository.findByBookId(book.getId());
-        if (cartItems.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No cart entries found for this book.");
+        if (!cartItems.isEmpty()) {
+            cartRepository.deleteAll(cartItems);
         }
-
-        cartRepository.deleteAll(cartItems);
     }
 
-    //Get carts by book ID
+    // Get carts by book ID
     public List<Cart> getCartsByBookId(Long bookId) {
         if (bookId == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Book ID cannot be null.");

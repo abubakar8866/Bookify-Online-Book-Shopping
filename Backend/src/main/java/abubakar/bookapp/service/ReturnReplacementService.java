@@ -173,7 +173,7 @@ public class ReturnReplacementService {
         }
 
         // Safely delete any associated files
-        List<String> imageUrls = rr.getImageUrls() == null ? List.of() : rr.getImageUrls(); 
+        List<String> imageUrls = rr.getImageUrls() == null ? List.of() : rr.getImageUrls();
         try {
             fileStorageService.deleteReturnReplacementImages(imageUrls);
         } catch (Exception e) {
@@ -278,6 +278,22 @@ public class ReturnReplacementService {
 
         book.setQuantity(book.getQuantity() - qty);
         bookRepository.save(book);
+    }
+
+    //print
+    public ReturnReplacement getPrintableRequest(Long id) {
+        ReturnReplacement rr = repo.findById(id)
+                .orElseThrow(
+                        () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Request not found with ID: " + id));
+
+        String status = rr.getStatus() == null ? "" : rr.getStatus().toUpperCase();
+
+        if (List.of("PENDING", "APPROVED").contains(status)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Printing is not allowed for requests in '" + status.toLowerCase() + "' status.");
+        }
+
+        return rr;
     }
 
     public List<ReturnReplacement> getAllRequests() {

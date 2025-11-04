@@ -24,7 +24,7 @@ public class ReturnReplacementController {
     @Autowired
     private ObjectMapper objectMapper;
 
-    //Create new return/replacement request (User side)
+    // Create new return/replacement request (User side)
     @PostMapping(value = "/request", consumes = { "multipart/form-data" })
     public ResponseEntity<?> createRequest(
             @RequestPart("value") String value,
@@ -34,14 +34,14 @@ public class ReturnReplacementController {
         return ResponseEntity.ok(saved);
     }
 
-    //Get all requests of a specific user
+    // Get all requests of a specific user
     @GetMapping("/user/{userId}")
     public ResponseEntity<List<ReturnReplacement>> getUserRequests(@PathVariable Long userId) {
         List<ReturnReplacement> list = service.getRequestsByUser(userId);
         return ResponseEntity.ok(list);
     }
 
-    //Get request by ID
+    // Get request by ID
     @GetMapping("/{id}")
     public ResponseEntity<ReturnReplacement> getRequestById(@PathVariable Long id) {
         return service.getRequestById(id)
@@ -51,7 +51,8 @@ public class ReturnReplacementController {
                         "Return/Replacement request not found with ID: " + id));
     }
 
-    //Edit an existing return/replacement request (user or admin as per your authrules).
+    // Edit an existing return/replacement request (user or admin as per your
+    // authrules).
     @PutMapping(value = "/{id}", consumes = { "multipart/form-data" })
     public ResponseEntity<?> editRequest(
             @PathVariable("id") Long id,
@@ -63,11 +64,18 @@ public class ReturnReplacementController {
         return ResponseEntity.ok(updated);
     }
 
-    //Delete a return/replacement request by id.
+    // Delete a return/replacement request by id.
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteRequest(@PathVariable Long id) {
         service.deleteRequest(id);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    }
+
+    // Print a return/replacement request by id.
+    @GetMapping("/print/{id}")
+    public ResponseEntity<ReturnReplacement> printRequest(@PathVariable Long id) {
+        ReturnReplacement rr = service.getPrintableRequest(id);
+        return ResponseEntity.ok(rr);
     }
 
 }

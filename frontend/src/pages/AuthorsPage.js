@@ -241,7 +241,7 @@ export default function AuthorsPage() {
           });
 
           // Reload authors
-          const res = await getAuthors(page, 4);
+          const res = await getAuthors(page, 3);
           if (res.data.content.length === 0 && page > 0) {
             setPage(page - 1);
           } else {

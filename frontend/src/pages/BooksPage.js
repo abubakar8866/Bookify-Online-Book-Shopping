@@ -255,7 +255,7 @@ export default function AllBooksPage() {
             type: "success",
           });
 
-          const res = await getBooks(page, 6);
+          const res = await getBooks(page, 8);
           if (res.data.content.length === 0 && page > 0) {
             setPage(page - 1);
           } else {

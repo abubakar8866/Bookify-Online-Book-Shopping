@@ -406,6 +406,11 @@ export function deleteReturnReplacementRequest(returnId) {
   return API.delete(`/returns/${returnId}`);
 }
 
+// Print a return/replacement request by ID
+export function printReturnReplacementRequest(requestId) {
+  return API.get(`/returns/print/${requestId}`);
+}
+
 /* -------------------- ADMIN RETURN / REPLACEMENT -------------------- */
 
 // Get all return/replacement requests (Admin)

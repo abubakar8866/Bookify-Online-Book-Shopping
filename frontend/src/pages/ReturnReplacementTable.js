@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getUserReturnRequests, editReturnReplacementRequest, deleteReturnReplacementRequest } from "../api";
+import { getUserReturnRequests, editReturnReplacementRequest, deleteReturnReplacementRequest, printReturnReplacementRequest } from "../api";
 import { useDropzone } from "react-dropzone";
 import "bootstrap-icons/font/bootstrap-icons.css";
 import "bootstrap/dist/css/bootstrap.min.css";
@@ -31,6 +31,7 @@ const ReturnReplacementTable = () => {
   // Fetch Requests
   useEffect(() => {
     fetchRequests();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleError = (error, fallbackMessage = "Something went wrong. Please try again.") => {
@@ -61,7 +62,7 @@ const ReturnReplacementTable = () => {
       setRequests((res.data || []).slice().reverse());
     } catch (err) {
       console.error(err);
-      handleError(err,"No return/Replacement request.");
+      handleError(err, "No return/Replacement request.");
     }
   };
 
@@ -174,7 +175,7 @@ const ReturnReplacementTable = () => {
       fetchRequests(); // refresh table
     } catch (err) {
       console.error(err);
-      handleError(err,'Failed update request.');
+      handleError(err, 'Failed update request.');
     }
   };
 
@@ -199,10 +200,116 @@ const ReturnReplacementTable = () => {
           fetchRequests(); // refresh table
         } catch (err) {
           console.error("Delete error:", err);
-          handleError(err,'Failed to delete request.');
+          handleError(err, 'Failed to delete request.');
         }
       },
     });
+  };
+
+  // ---------------- Print Handler ----------------
+  const handlePrintRequest = async (req) => {
+    try {
+      const response = await printReturnReplacementRequest(req.id);
+      const data = response.data;
+
+      // Prevent printing if backend restricts (e.g., 403 Forbidden)
+      if (!data || !data.id) {
+        throw new Error("Invalid return/replacement data received.");
+      }
+
+      // Build printable HTML
+      const printContent = `
+      <div id="printableArea" style="font-family: Arial, sans-serif; padding: 20px;">
+        <h2 style="text-align: center;">Return/Replacement Request - 📚Bookify</h2>
+        <p style="text-align: center; font-size: 18px; color: gray;">Request ID: ${data.id}</p>
+
+        <div style="margin-top: 10px;">
+          <p><strong>Customer Name:</strong> ${data.customerName || "-"}</p>
+          <p><strong>Phone:</strong> ${data.customerPhone || "-"}</p>
+          <p><strong>Address:</strong> ${data.customerAddress || "-"}</p>
+          <p><strong>Book Title:</strong> ${data.bookTitle || "-"}</p>
+          <p><strong>Author:</strong> ${data.bookAuthor || "-"}</p>
+          <p><strong>Quantity:</strong> ${data.quantity || 1}</p>
+          <p><strong>Request Type:</strong> ${data.type || "-"}</p>
+          <p><strong>Reason:</strong> ${data.reason || "-"}</p>
+          <p><strong>Status:</strong> ${data.status || "-"}</p>
+          <p><strong>Requested Date:</strong> ${new Date(data.requestedDate).toLocaleString()}</p>
+          ${data.processedDate
+          ? `<p><strong>Processed Date:</strong> ${new Date(data.processedDate).toLocaleString()}</p>`
+          : ""
+        }
+          ${data.deliveryDate
+          ? `<p><strong>Delivery Date:</strong> ${new Date(data.deliveryDate).toLocaleString()}</p>`
+          : ""
+        }
+        </div>
+
+        ${data.type?.toUpperCase() === "RETURN"
+          ? `
+        <p style="margin-top: 10px;">
+          <strong>Refunded Amount:</strong> ₹${(data.refundedAmount ?? 0).toFixed(2)}
+        </p>
+        <p><strong>Payment ID:</strong> ${data.paymentId || "-"}</p>
+      `
+          : `
+        <p style="margin-top: 10px;">
+          <strong>Refunded Amount:</strong> ₹0.00
+        </p>
+        <p><strong>Payment ID:</strong> -</p>
+      `
+        }
+
+
+        ${data.imageUrls && data.imageUrls.length > 0
+          ? `
+              <div style="margin-top: 20px;">
+                <h3>Attached Images:</h3>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                  ${data.imageUrls
+            .map(
+              (url) =>
+                `<img src="${url}" alt="Return Image" style="width: 90px; height: 90px; border: 1px solid #ccc; border-radius: 8px; object-fit: cover;" />`
+            )
+            .join("")}
+                </div>
+              </div>`
+          : ""
+        }
+
+        <p style="margin-top: 40px; text-align: center; font-size: 18px; color: gray;">
+          Generated at: ${new Date().toLocaleString()} <br/>
+          Thank you for using 📚Bookify Returns/Replcement Service!
+        </p>
+      </div>
+    `;
+
+      // Create a hidden iframe for printing
+      const iframe = document.createElement("iframe");
+      iframe.style.position = "fixed";
+      iframe.style.right = "0";
+      iframe.style.bottom = "0";
+      iframe.style.width = "0";
+      iframe.style.height = "0";
+      iframe.style.border = "0";
+      document.body.appendChild(iframe);
+
+      const doc = iframe.contentWindow.document;
+      doc.open();
+      doc.write(printContent);
+      doc.close();
+
+      // Trigger print dialog
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+
+      // Cleanup
+      iframe.onload = () => {
+        setTimeout(() => document.body.removeChild(iframe), 1000);
+      };
+    } catch (error) {
+      console.error("Print error:", error);
+      handleError(error, "Failed to print return/replacement request.");
+    }
   };
 
   return (
@@ -320,6 +427,15 @@ const ReturnReplacementTable = () => {
                       >
                         <i className="bi bi-trash"></i>
                       </button>
+
+                      {/* -------- Print Button -------- */}
+                      <button
+                        className="btn btn-outline-success btn-sm ms-2"
+                        onClick={() => handlePrintRequest(req)}
+                      >
+                        <i className="bi bi-printer"></i>
+                      </button>
+
                     </>
                   );
                 })()}

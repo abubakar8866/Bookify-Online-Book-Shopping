@@ -1,6 +1,7 @@
 package abubakar.bookapp.controller;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -52,18 +53,19 @@ public class OrderController {
 
     // Remove an order by order ID
     @DeleteMapping("/{orderId}")
-    public ResponseEntity<String> removeOrder(@PathVariable Long orderId) {
-        orderService.removeOrder(orderId);
-        return ResponseEntity.ok("Order removed successfully.");
+    public ResponseEntity<Map<String, String>> removeOrder(@PathVariable Long orderId) {
+        String message = orderService.removeOrder(orderId);
+        return ResponseEntity.ok(Map.of("message", message));
     }
 
     // Remove a single product from an order
     @DeleteMapping("/{orderId}/book/{bookId}")
-    public ResponseEntity<String> removeOrderItem(
+    public ResponseEntity<Map<String, String>> removeOrderItem(
             @PathVariable Long orderId,
             @PathVariable Long bookId) {
-        orderService.removeOrderItem(orderId, bookId);
-        return ResponseEntity.ok("Order item removed successfully.");
+
+        String message = orderService.removeOrderItem(orderId, bookId);
+        return ResponseEntity.ok(Map.of("message", message));
     }
 
     // Add review and rating for a specific order item
@@ -76,7 +78,7 @@ public class OrderController {
                 orderService.addReviewAndRating(orderId, bookId, dto.getReview(), dto.getRating()));
     }
 
-    //Print order (only for delivered orders)
+    // Print order (only for delivered orders)
     @GetMapping("/{orderId}/print/{orderStatus}")
     public ResponseEntity<Order> printOrder(
             @PathVariable Long orderId,

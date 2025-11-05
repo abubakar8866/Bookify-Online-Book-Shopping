@@ -7,6 +7,7 @@ import org.springframework.web.server.ResponseStatusException;
 import abubakar.bookapp.models.Book;
 import abubakar.bookapp.models.Order;
 import abubakar.bookapp.models.OrderItem;
+import abubakar.bookapp.models.RazorpayInfo;
 import abubakar.bookapp.models.Review;
 import abubakar.bookapp.payload.OrderRangeStatsDTO;
 import abubakar.bookapp.payload.OrderStatsDTO;
@@ -14,6 +15,7 @@ import abubakar.bookapp.payload.OrderUpdateDTO;
 import abubakar.bookapp.repository.BookRepository;
 import abubakar.bookapp.repository.CartRepository;
 import abubakar.bookapp.repository.OrderRepository;
+import abubakar.bookapp.repository.RazorpayInfoRepository;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -35,6 +37,12 @@ public class OrderService {
 
     @Autowired
     private CartRepository cartRepository;
+
+    @Autowired
+    private RazorpayInfoRepository razorpayInfoRepository;
+
+    @Autowired
+    private PaymentService paymentService;
 
     // Place a new order
     public Order placeOrder(Order order) {
@@ -125,19 +133,31 @@ public class OrderService {
     }
 
     // Remove an entire order
-    public void removeOrder(Long orderId) {
+    @Transactional
+    public String removeOrder(Long orderId) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Order not found with ID: " + orderId));
 
-        if ("UPI".equalsIgnoreCase(order.getOrderMode())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "You cannot cancel orders placed via UPI.");
-        }
-
         if ("Delivered".equalsIgnoreCase(order.getOrderStatus())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "You cannot delete a delivered order.");
+        }
+
+        // If payment mode is UPI, initiate refund
+        RazorpayInfo info = razorpayInfoRepository.findByOrderId(orderId);
+        String message;
+        if ("UPI".equalsIgnoreCase(order.getOrderMode()) && info != null) {
+            try {
+                paymentService.refundPayment(info.getRazorpayPaymentId(), order.getTotal());
+                razorpayInfoRepository.delete(info);
+                message = "Your order has been cancelled and your refund has been processed successfully.";
+            } catch (Exception e) {
+                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
+                        "Refund failed: " + e.getMessage(), e);
+            }
+        } else {
+            message = "Your order has been cancelled successfully.";
         }
 
         // Restore stock
@@ -149,18 +169,19 @@ public class OrderService {
                 });
             }
         }
+        // Load items to ensure cascade triggers
+        order.getItems().size();
 
-        orderRepository.deleteById(orderId);
+        // Use delete(order) instead of deleteById(orderId)
+        orderRepository.delete(order);
+
+        return message;
     }
 
-    // Remove a single item from an order
-    public void removeOrderItem(Long orderId, Long bookId) {
+    @Transactional
+    public String removeOrderItem(Long orderId, Long bookId) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found."));
-
-        if ("UPI".equalsIgnoreCase(order.getOrderMode())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You cannot modify UPI orders.");
-        }
 
         if ("Delivered".equalsIgnoreCase(order.getOrderStatus()) ||
                 "Cancelled".equalsIgnoreCase(order.getOrderStatus())) {
@@ -174,23 +195,62 @@ public class OrderService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Book not found in this order."));
 
+        // Refund logic (if UPI)
+        boolean refundProcessed = false;
+        if ("UPI".equalsIgnoreCase(order.getOrderMode())) {
+            RazorpayInfo info = razorpayInfoRepository.findByOrderId(orderId);
+            if (info != null) {
+                try {
+                    paymentService.refundPayment(info.getRazorpayPaymentId(), itemToRemove.getSubtotal());
+                    refundProcessed = true;
+                } catch (Exception e) {
+                    throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
+                            "Refund failed: " + e.getMessage(), e);
+                }
+            }
+        }
+
         // Restore stock
         bookRepository.findById(bookId).ifPresent(book -> {
             book.setQuantity(book.getQuantity() + itemToRemove.getQuantity());
             bookRepository.save(book);
         });
 
+        // Remove item from the order
         order.getItems().remove(itemToRemove);
 
+        String message;
+
         if (order.getItems().isEmpty()) {
+            // Delete the entire order if no items left
+            RazorpayInfo info = razorpayInfoRepository.findByOrderId(orderId);
+            if (info != null) {
+                razorpayInfoRepository.delete(info);
+            }
             orderRepository.delete(order);
+
+            if (refundProcessed) {
+                message = "All items were removed. Your order has been cancelled and the refund has been processed successfully.";
+            } else {
+                message = "All items were removed. Your order has been cancelled successfully.";
+            }
         } else {
-            order.setTotal((float) order.getItems().stream()
+            // Recalculate order total
+            float newTotal = (float) order.getItems().stream()
                     .mapToDouble(OrderItem::getSubtotal)
-                    .sum());
+                    .sum();
+            order.setTotal(newTotal);
             order.setUpdatedAt(LocalDateTime.now());
             orderRepository.save(order);
+
+            if (refundProcessed) {
+                message = "The selected item was removed and the refund has been processed successfully.";
+            } else {
+                message = "The selected item was removed successfully.";
+            }
         }
+
+        return message;
     }
 
     // Add review & rating

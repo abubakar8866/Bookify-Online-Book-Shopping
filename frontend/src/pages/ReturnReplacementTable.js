@@ -245,18 +245,22 @@ const ReturnReplacementTable = () => {
         </div>
 
         ${data.type?.toUpperCase() === "RETURN"
-          ? `
-        <p style="margin-top: 10px;">
-          <strong>Refunded Amount:</strong> ₹${(data.refundedAmount ?? 0).toFixed(2)}
-        </p>
-        <p><strong>Payment ID:</strong> ${data.paymentId || "-"}</p>
-      `
-          : `
-        <p style="margin-top: 10px;">
-          <strong>Refunded Amount:</strong> ₹0.00
-        </p>
-        <p><strong>Payment ID:</strong> -</p>
-      `
+          ? 
+          `
+            <p style="margin-top: 10px;">
+              <strong>Refunded Amount:</strong> ₹${(data.refundedAmount ?? 0).toFixed(2)}
+            </p>
+            <p><strong>Payment ID:</strong> ${data.paymentId || "-"}</p>
+          `
+          : 
+          `
+            <p style="margin-top: 10px;">
+              <strong>Refunded Amount:</strong> ₹0.00
+            </p>
+            <p><strong>Payment ID:</strong> -</p>
+
+          `
+          
         }
 
 

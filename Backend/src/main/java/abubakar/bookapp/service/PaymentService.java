@@ -1,5 +1,6 @@
 package abubakar.bookapp.service;
 
+import java.math.BigDecimal;
 import java.util.Map;
 
 import org.json.JSONObject;
@@ -14,8 +15,13 @@ import com.razorpay.RazorpayException;
 import com.razorpay.Refund;
 import com.razorpay.Utils;
 
+import abubakar.bookapp.models.Book;
 import abubakar.bookapp.models.Order;
+import abubakar.bookapp.models.OrderItem;
 import abubakar.bookapp.models.RazorpayInfo;
+import abubakar.bookapp.repository.BookRepository;
+import abubakar.bookapp.repository.CartRepository;
+import abubakar.bookapp.repository.OrderRepository;
 import abubakar.bookapp.repository.RazorpayInfoRepository;
 
 @Service
@@ -28,10 +34,16 @@ public class PaymentService {
     private String razorpaySecret;
 
     @Autowired
-    private OrderService orderService;
+    private RazorpayInfoRepository razorpayInfoRepository;
 
     @Autowired
-    private RazorpayInfoRepository razorpayInfoRepository;
+    private BookRepository bookRepository;
+
+    @Autowired
+    private OrderRepository orderRepository;
+
+    @Autowired
+    private CartRepository cartRepository;
 
     public String createRazorpayOrder(float amount) {
         try {
@@ -72,10 +84,42 @@ public class PaymentService {
         // 1. Verify payment
         verifyPayment(razorpayOrderId, razorpayPaymentId, razorpaySignature);
 
-        // 2. Place order
-        Order savedOrder = orderService.placeOrder(order);
+        // 2. Process items & stock like in OrderService.placeOrder()
+        float total = 0f;
 
-        // 3. Save payment info
+        for (OrderItem item : order.getItems()) {
+            Book book = bookRepository.findById(item.getBookId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                            "Book not found with ID: " + item.getBookId()));
+
+            int newQuantity = book.getQuantity() - item.getQuantity();
+            if (newQuantity < 0) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Insufficient stock for book: " + book.getName());
+            }
+
+            book.setQuantity(newQuantity);
+            bookRepository.save(book);
+
+            item.setBookName(book.getName());
+            item.setUnitPrice(book.getPrice().floatValue());
+            item.setSubtotal(book.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())).floatValue());
+            item.setAuthorName(book.getAuthor() != null ? book.getAuthor().getName() : "Unknown");
+            item.setOrder(order);
+
+            total += item.getSubtotal();
+        }
+
+        order.setTotal(total);
+
+        if (order.getUser() != null) {
+            cartRepository.deleteByUserId(order.getUser().getId());
+        }
+
+        // 3. Save order directly
+        Order savedOrder = orderRepository.save(order);
+
+        // 4. Save payment info
         RazorpayInfo info = new RazorpayInfo();
         info.setOrder(savedOrder);
         info.setRazorpayOrderId(razorpayOrderId);
@@ -101,7 +145,7 @@ public class PaymentService {
 
             JSONObject refundRequest = new JSONObject();
             refundRequest.put("payment_id", paymentId);
-            refundRequest.put("amount", (int) amountInINR);
+            refundRequest.put("amount", (int) (amountInINR * 100)); // convert INR → paise
             refundRequest.put("speed", "normal");
 
             return client.payments.refund(refundRequest);

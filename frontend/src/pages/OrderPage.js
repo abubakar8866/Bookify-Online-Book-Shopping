@@ -94,7 +94,7 @@ function OrderPage() {
         console.error(error);
         handleError(error, "No books in order.");
       });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, navigate, returnModal.visible, returnModal.order?.id]);
 
   const handleError = (error, fallbackMessage = "Something went wrong. Please try again.") => {
@@ -160,35 +160,63 @@ function OrderPage() {
 
   };
 
+  // ---------------- Cancel Entire Order ----------------
   const handleCancel = (orderId) => {
     setModal({
       show: true,
       title: "Cancel Order",
       message: "Are you sure you want to cancel this order?",
       type: "warning",
-      onConfirm: () => {
-        removeOrder(orderId)
-          .then(() => setOrders(orders.filter(o => o.id !== orderId)))
-          .catch(err => handleError(err, "Failed to cancel the order."));
-      }
+      onConfirm: async () => {
+        try {
+          const res = await removeOrder(orderId);
+
+          setModal({
+            show: true,
+            title: "Order Cancelled",
+            message: res.data?.message || "Order cancelled successfully.",
+            type: "success",
+          });
+
+          // remove from list
+          setOrders(orders.filter(o => o.id !== orderId));
+        } catch (err) {
+          console.error("Cancel order error:", err);
+          handleError(err, "Failed to cancel the order.");
+        }
+      },
     });
   };
 
+  // ---------------- Cancel Single Product from Order ----------------
   const handleCancelProduct = (orderId, bookId) => {
     setModal({
       show: true,
       title: "Remove Product",
       message: "Are you sure you want to remove this product from the order?",
       type: "warning",
-      onConfirm: () => {
-        removeOrderItem(orderId, bookId)
-          .then(() => getOrdersByUserId(userId))
-          .then(res => {
-            const sorted = res.data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-            setOrders(sorted);
-          })
-          .catch(err => handleError(err, "Failed to delete order product."));
-      }
+      onConfirm: async () => {
+        try {
+          const res = await removeOrderItem(orderId, bookId);
+
+          setModal({
+            show: true,
+            title: "Product Removed",
+            message: res.data?.message || "Product removed successfully.",
+            type: "success",
+          });
+
+          // refresh orders
+          const refreshed = await getOrdersByUserId(userId);
+          const sorted = refreshed.data.sort(
+            (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+          );
+          setOrders(sorted);
+        } catch (err) {
+          console.error("Cancel product error:", err);
+          handleError(err, "Failed to delete order product.");
+        }
+      },
     });
   };
 
@@ -640,16 +668,6 @@ function OrderPage() {
                   <button
                     className="btn btn-sm"
                     onClick={() => {
-                      if (orderMode === "UPI") {
-                        setModal({
-                          show: true,
-                          title: "Not Allowed",
-                          message: "You cannot cancel orders placed via UPI.",
-                          type: "info",
-                          onConfirm: null
-                        });
-                        return;
-                      }
                       if (orderStatus === "Delivered") {
                         setModal({
                           show: true,
@@ -663,15 +681,15 @@ function OrderPage() {
                       handleCancel(id);
                     }}
                     style={{
-                      cursor: orderMode === "UPI" || orderStatus === "Delivered" ? "not-allowed" : "pointer",
-                      opacity: orderMode === "UPI" || orderStatus === "Delivered" ? 0.5 : 1
+                      cursor: orderStatus === "Delivered" ? "not-allowed" : "pointer",
+                      opacity: orderStatus === "Delivered" ? 0.5 : 1
                     }}
                   >
 
                     <i
                       className="bi bi-trash"
                       style={{
-                        color: (orderStatus === "Delivered" || orderMode === "UPI") ? "grey" : "red",
+                        color: (orderStatus === "Delivered") ? "grey" : "red",
                         fontSize: "1.2rem"
                       }}
                     ></i>
@@ -746,16 +764,6 @@ function OrderPage() {
                               <button
                                 className="btn btn-sm"
                                 onClick={() => {
-                                  if (order.orderMode === "UPI") {
-                                    setModal({
-                                      show: true,
-                                      title: "Not Allowed",
-                                      message: "You cannot cancel products from a UPI order.",
-                                      type: "info",
-                                      onConfirm: null
-                                    });
-                                    return;
-                                  }
                                   if (order.orderStatus === "Delivered" || order.orderStatus === "Cancelled") {
                                     setModal({
                                       show: true,
@@ -769,14 +777,14 @@ function OrderPage() {
                                   handleCancelProduct(order.id, item.bookId);
                                 }}
                                 style={{
-                                  cursor: order.orderMode === "UPI" || order.orderStatus === "Delivered" || order.orderStatus === "Cancelled" ? "not-allowed" : "pointer",
-                                  opacity: order.orderMode === "UPI" || order.orderStatus === "Delivered" || order.orderStatus === "Cancelled" ? 0.5 : 1
+                                  cursor: order.orderStatus === "Delivered" || order.orderStatus === "Cancelled" ? "not-allowed" : "pointer",
+                                  opacity: order.orderStatus === "Delivered" || order.orderStatus === "Cancelled" ? 0.5 : 1
                                 }}
                               >
                                 <i
                                   className="bi bi-trash"
                                   style={{
-                                    color: (order.orderStatus === "Delivered" || order.orderStatus === "Cancelled" || order.orderMode === "UPI") ? "grey" : "red",
+                                    color: (order.orderStatus === "Delivered" || order.orderStatus === "Cancelled") ? "grey" : "red",
                                     fontSize: "1.2rem"
                                   }}
                                 ></i>

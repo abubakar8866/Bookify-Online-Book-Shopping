@@ -31,7 +31,7 @@ export default function AuthorsPage() {
   });
 
   const pageSize = 3;
-  const languageOptions = ["Java", "Python", "JavaScript", "C++", "Go"];
+  const languageOptions = ["Java", "Python", "JavaScript", "C++", "Go", "C", "C#", "CSS"];
 
   function initialFormState() {
     return {
@@ -313,7 +313,7 @@ export default function AuthorsPage() {
                     src={author.imageUrl}
                     alt={author.name}
                     className="card-img-top"
-                    style={{ height: "270px", objectFit: "fill", backgroundColor: "#f0f0f0" }}
+                    style={{ height: "380px", objectFit: "fill", backgroundColor: "#f0f0f0" }}
                     onError={e => (e.target.src = "/default-avatar.png")}
                   />
                   <div className="card-body">
@@ -482,7 +482,7 @@ export default function AuthorsPage() {
                   {errors.gender && <div className="text-danger small">{errors.gender}</div>}
                 </div>
                 <div className="mb-2">
-                  <label>Programming Languages</label>
+                  <label>Languages</label>
                   <div className="d-flex flex-wrap">
                     {languageOptions.map(lang => (
                       <div key={lang} className="form-check me-3">

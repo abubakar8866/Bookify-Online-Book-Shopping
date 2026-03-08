@@ -26,8 +26,8 @@ export default function Login() {
     }
     if (!password.trim()) {
       newErrors.password = "Password is required";
-    } else if (password.length <= 6 || password.length >= 20) {
-      newErrors.password = "Password must be between 7 and 19 characters";
+    } else if (password.length < 8 || password.length > 15) {
+      newErrors.password = "Password must be between 8 and 15 characters";
     }
     return newErrors;
   };
@@ -165,7 +165,7 @@ export default function Login() {
             <button
               type="button"
               className="btn btn-link p-0 text-decoration-none"
-              onClick={() => setShowForgot(true)} 
+              onClick={() => setShowForgot(true)}
               disabled={loading}
             >
               Forgot Password?

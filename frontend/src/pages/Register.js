@@ -24,10 +24,11 @@ export default function Register() {
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
       newErrors.email = "Invalid email format";
 
-    if (!password.trim()) newErrors.password = "Password is required";
-    else if (password.length < 6)
-      newErrors.password = "Password must be at least 6 characters";
-
+    if (!password.trim()) {
+      newErrors.password = "Password is required";
+    } else if (password.length < 8 || password.length > 15) {
+      newErrors.password = "Password must be between 8 and 15 characters";
+    }
     return newErrors;
   };
 
@@ -45,7 +46,7 @@ export default function Register() {
     }
 
     try {
-      await registerUser(name, email, password);  
+      await registerUser(name, email, password);
       setMsg("Registered. Please login.");
       setTimeout(() => nav("/login"), 1000);
     } catch (err) {
@@ -55,9 +56,11 @@ export default function Register() {
           backendErrors[error.field] = error.defaultMessage;
         });
         setErrors(backendErrors);
-      } else if (err.response?.data) {
-        setMsg(err.response.data);
-      } else {
+      }
+      else if (err.response?.data?.message) {
+        setMsg(err.response.data.message);
+      }
+      else {
         setMsg("Something went wrong.");
       }
     } finally {
@@ -67,7 +70,7 @@ export default function Register() {
 
   return (
 
-    <div className="d-flex align-items-center justify-content-center reg" style={{height:"90vh"}}>
+    <div className="d-flex align-items-center justify-content-center reg" style={{ height: "90vh" }}>
       <div className="card shadow-lg p-4" style={{ width: "100%", maxWidth: 450 }}>
         <div className="text-center mb-4">
           <i className="bi bi-person-plus-fill text-success" style={{ fontSize: 50 }}></i>
@@ -150,11 +153,11 @@ export default function Register() {
           >
             Reset
           </button>
-          
+
         </form>
       </div>
     </div>
-    
+
   );
 
 }

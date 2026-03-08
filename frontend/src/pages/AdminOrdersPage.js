@@ -66,16 +66,27 @@ function AdminOrderPage() {
     };
 
     const handleStatusChange = (orderId, newStatus) => {
+
         updateOrderStatus(orderId, newStatus)
             .then(res => {
-                setOrders(prevOrders =>
-                    prevOrders.map(order =>
-                        order.id === orderId ? res.data : order
+
+                const updatedOrder = res.data.order;
+
+                setOrders(prev =>
+                    prev.map(order =>
+                        order.id === orderId ? updatedOrder : order
                     )
                 );
+
+                setModal({
+                    show: true,
+                    title: "Success",
+                    message: res.data?.message || "Order updated successfully.",
+                    type: "success"
+                });
+
             })
             .catch(error => {
-                console.error(error);
                 handleError(error, "Failed to update order status.");
             });
     };
@@ -147,7 +158,9 @@ function AdminOrderPage() {
                                         ))}
                                     </select>
                                     |{" "}
-                                    <strong>Total:</strong> {batch.reduce((sum, o) => sum + o.total, 0).toFixed(2)} |{" "}
+                                    <strong>Subtotal:</strong> {batch.reduce((sum, o) => sum + o.subtotal, 0).toFixed(2)} |{" "}
+                                    <strong>GST:</strong> {batch.reduce((sum, o) => sum + o.gst, 0).toFixed(2)} |{" "}
+                                    <strong>Total:</strong> {batch.reduce((sum, o) => sum + o.total, 0).toFixed(2)}|{" "}
                                     <strong>Updated at:</strong> {new Date(batch[0].updatedAt).toLocaleString()}
                                 </div>
 

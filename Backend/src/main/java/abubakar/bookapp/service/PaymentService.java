@@ -85,7 +85,7 @@ public class PaymentService {
         verifyPayment(razorpayOrderId, razorpayPaymentId, razorpaySignature);
 
         // 2. Process items & stock like in OrderService.placeOrder()
-        float total = 0f;
+        float subtotal = 0f;
 
         for (OrderItem item : order.getItems()) {
             Book book = bookRepository.findById(item.getBookId())
@@ -103,13 +103,27 @@ public class PaymentService {
 
             item.setBookName(book.getName());
             item.setUnitPrice(book.getPrice().floatValue());
-            item.setSubtotal(book.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())).floatValue());
+
+            float itemSubtotal = book.getPrice()
+                    .multiply(BigDecimal.valueOf(item.getQuantity()))
+                    .floatValue();
+
+            item.setSubtotal(itemSubtotal);
             item.setAuthorName(book.getAuthor() != null ? book.getAuthor().getName() : "Unknown");
             item.setOrder(order);
 
-            total += item.getSubtotal();
+            subtotal += itemSubtotal;
         }
 
+        // calculate GST
+        float gst = subtotal * 0.05f;
+
+        // calculate total
+        float total = subtotal + gst;
+
+        // set values in order
+        order.setSubtotal(subtotal);
+        order.setGst(gst);
         order.setTotal(total);
 
         if (order.getUser() != null) {
@@ -139,19 +153,46 @@ public class PaymentService {
         return info;
     }
 
+    // public Refund refundPayment(String paymentId, double amountInINR) {
+    // try {
+    // RazorpayClient client = new RazorpayClient(razorpayKeyId, razorpaySecret);
+
+    // JSONObject refundRequest = new JSONObject();
+    // refundRequest.put("payment_id", paymentId);
+    // refundRequest.put("amount", (int) (amountInINR * 100)); // convert INR →
+    // paise
+    // refundRequest.put("speed", "normal");
+
+    // return client.payments.refund(refundRequest);
+    // } catch (RazorpayException e) {
+    // throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
+    // "Razorpay refund failed: " + e.getMessage(), e);
+    // }
+    // }
+
     public Refund refundPayment(String paymentId, double amountInINR) {
         try {
+
             RazorpayClient client = new RazorpayClient(razorpayKeyId, razorpaySecret);
 
             JSONObject refundRequest = new JSONObject();
-            refundRequest.put("payment_id", paymentId);
-            refundRequest.put("amount", (int) (amountInINR * 100)); // convert INR → paise
+            refundRequest.put("amount", (int) (amountInINR * 100)); // INR → paise
             refundRequest.put("speed", "normal");
 
-            return client.payments.refund(refundRequest);
+            Refund refund = client.payments.refund(paymentId, refundRequest);
+
+            System.out.println("Refund successful: " + refund.get("id"));
+
+            return refund;
+
         } catch (RazorpayException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
-                    "Razorpay refund failed: " + e.getMessage(), e);
+
+            System.out.println("Refund failed: " + e.getMessage());
+
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_GATEWAY,
+                    "Razorpay refund failed: " + e.getMessage(),
+                    e);
         }
     }
 

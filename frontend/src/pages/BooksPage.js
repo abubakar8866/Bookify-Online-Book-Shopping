@@ -341,8 +341,7 @@ export default function AllBooksPage() {
                       alt={book.name}
                       className="card-img-top"
                       style={{
-                        height: "220px",
-                        objectFit: "cover",
+                        height: "550px",
                         borderTopLeftRadius: "0.5rem",
                         borderTopRightRadius: "0.5rem",
                       }}

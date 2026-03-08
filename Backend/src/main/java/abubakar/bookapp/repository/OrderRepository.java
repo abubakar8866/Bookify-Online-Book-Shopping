@@ -17,19 +17,19 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     long countByCreatedAtAfter(LocalDateTime dateTime);
 
-    @Query("SELECT COALESCE(SUM(o.total),0) FROM Order o WHERE o.createdAt >= :dateTime")
+    @Query("SELECT COALESCE(SUM(o.total),0) FROM Order o WHERE o.createdAt >= :dateTime AND o.orderStatus <> 'Cancelled'")
     float sumTodaysOrders(LocalDateTime dateTime);
 
-    @Query("SELECT COALESCE(SUM(o.total),0) FROM Order o")
+    @Query("SELECT COALESCE(SUM(o.total),0) FROM Order o WHERE o.orderStatus <> 'Cancelled'")
     float sumTotalOrders();
 
     List<Order> findTop5ByOrderByCreatedAtDesc();
 
     // For date range filtering
-    @Query("SELECT COUNT(o) FROM Order o WHERE o.createdAt BETWEEN :startDate AND :endDate")
+    @Query("SELECT COUNT(o) FROM Order o WHERE o.createdAt BETWEEN :startDate AND :endDate AND o.orderStatus <> 'Cancelled'")
     long countOrdersInRange(LocalDateTime startDate, LocalDateTime endDate);
 
-    @Query("SELECT COALESCE(SUM(o.total),0) FROM Order o WHERE o.createdAt BETWEEN :startDate AND :endDate")
+    @Query("SELECT COALESCE(SUM(o.total),0) FROM Order o WHERE o.createdAt BETWEEN :startDate AND :endDate AND o.orderStatus <> 'Cancelled'")
     float sumOrdersInRange(LocalDateTime startDate, LocalDateTime endDate);
 
 }

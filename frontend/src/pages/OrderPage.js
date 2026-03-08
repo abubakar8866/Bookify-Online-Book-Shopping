@@ -95,7 +95,7 @@ function OrderPage() {
         handleError(error, "No books in order.");
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, navigate, returnModal.visible, returnModal.order?.id]);
+  }, [userId]);
 
   const handleError = (error, fallbackMessage = "Something went wrong. Please try again.") => {
     let message = fallbackMessage;
@@ -286,9 +286,6 @@ function OrderPage() {
     }, {});
   };
 
-  const getBatchTotal = (batch) =>
-    batch.reduce((sum, order) => sum + order.total, 0);
-
   const groupedOrders = groupOrdersByTime(orders);
 
   // Handle image input change
@@ -369,6 +366,7 @@ function OrderPage() {
 
   // Remove single image
   const handleRemoveImage = (index) => {
+    URL.revokeObjectURL(previewImages[index]);
     setPreviewImages((prev) => prev.filter((_, i) => i !== index));
     setReturnForm((prev) => ({
       ...prev,
@@ -498,12 +496,12 @@ function OrderPage() {
       await printOrder(id, orderStatus);
 
       // If backend allows, continue local print
-      const grandTotal = getBatchTotal(batch);
-      const subtotal = grandTotal / 1.05;
-      const gstAmount = grandTotal - subtotal;
+      const subtotal = batch.reduce((sum, order) => sum + order.subtotal, 0);
+      const gstAmount = batch.reduce((sum, order) => sum + order.gst, 0);
+      const grandTotal = batch.reduce((sum, order) => sum + order.total, 0);
 
       const year = new Date().getFullYear();
-      const invoiceNumber = `INV-${year}-${String(batchIndex + 1).padStart(4, "0")}`;
+      const invoiceNumber = `INV-${year}-${id}`;
 
       const printContent = `
       <div id="printableArea" style="font-family: Arial, sans-serif; padding: 20px;">
@@ -528,7 +526,7 @@ function OrderPage() {
               <th style="border:1px solid #ddd; padding:8px;">Author</th>
               <th style="border:1px solid #ddd; padding:8px;">Qty</th>
               <th style="border:1px solid #ddd; padding:8px;">Price</th>
-              <th style="border:1px solid #ddd; padding:8px;">Total</th>
+              <th style="border:1px solid #ddd; padding:8px;">Subtotal</th>
             </tr>
           </thead>
           <tbody>
@@ -570,7 +568,7 @@ function OrderPage() {
             .join("")
           : ""
         }
-
+    
         <div style="margin-top: 20px; font-size: 1rem;">
           <p>Subtotal (excl. GST): ₹${subtotal.toFixed(2)}</p>
           <p>GST (5%): ₹${gstAmount.toFixed(2)}</p>
@@ -668,11 +666,11 @@ function OrderPage() {
                   <button
                     className="btn btn-sm"
                     onClick={() => {
-                      if (orderStatus === "Delivered") {
+                      if (orderStatus === "Delivered" || orderStatus === "Cancelled") {
                         setModal({
                           show: true,
                           title: "Delete Not Allowed",
-                          message: "You cannot delete a delivered order.",
+                          message: `You cannot delete ${orderStatus} order.`,
                           type: "warning",
                           onConfirm: null
                         });
@@ -681,15 +679,15 @@ function OrderPage() {
                       handleCancel(id);
                     }}
                     style={{
-                      cursor: orderStatus === "Delivered" ? "not-allowed" : "pointer",
-                      opacity: orderStatus === "Delivered" ? 0.5 : 1
+                      cursor: (orderStatus === "Delivered" || orderStatus === "Cancelled") ? "not-allowed" : "pointer",
+                      opacity: (orderStatus === "Delivered" || orderStatus === "Cancelled") ? 0.5 : 1
                     }}
                   >
 
                     <i
                       className="bi bi-trash"
                       style={{
-                        color: (orderStatus === "Delivered") ? "grey" : "red",
+                        color: (orderStatus === "Delivered" || orderStatus === "Cancelled") ? "grey" : "red",
                         fontSize: "1.2rem"
                       }}
                     ></i>
@@ -730,7 +728,9 @@ function OrderPage() {
                 <div className="mb-2">
                   <strong>Order Mode:</strong> {orderMode} |{" "}
                   <strong>Status:</strong> {orderStatus} |{" "}
-                  <strong>Total:</strong> {getBatchTotal(batch).toFixed(2)} |{" "}
+                  <strong>Subtotal:</strong> ₹{batch.reduce((s, o) => s + o.subtotal, 0).toFixed(2)} |{" "}
+                  <strong>GST:</strong> ₹{batch.reduce((s, o) => s + o.gst, 0).toFixed(2)} |{" "}
+                  <strong>Total:</strong> ₹{batch.reduce((s, o) => s + o.total, 0).toFixed(2)} | {" "}
                   <strong>Updated at:</strong> {new Date(batch[0].updatedAt).toLocaleString()}
                 </div>
 
@@ -743,7 +743,7 @@ function OrderPage() {
                         <th>Author</th>
                         <th>Quantity</th>
                         <th>Price</th>
-                        <th>Total</th>
+                        <th>Subtotal</th>
                         <th>Actions</th>
                       </tr>
                     </thead>
@@ -756,8 +756,8 @@ function OrderPage() {
                             <td>{item.bookName}</td>
                             <td>{item.authorName}</td>
                             <td>{item.quantity}</td>
-                            <td>{item.unitPrice}</td>
-                            <td>{item.subtotal}</td>
+                            <td>₹{item.unitPrice.toFixed(2)}</td>
+                            <td>₹{item.subtotal.toFixed(2)}</td>
                             <td>
 
                               {/*Cancel product button */}

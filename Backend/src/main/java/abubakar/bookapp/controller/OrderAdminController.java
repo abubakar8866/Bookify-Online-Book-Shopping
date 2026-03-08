@@ -2,7 +2,9 @@ package abubakar.bookapp.controller;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -60,10 +62,17 @@ public class OrderAdminController {
 
     // Update only orderStatus (Admin only)
     @PutMapping("/{orderId}/status")
-    public ResponseEntity<Order> updateOrderStatus(
+    public ResponseEntity<Map<String, Object>> updateOrderStatus(
             @PathVariable Long orderId,
             @RequestBody OrderStatusUpdateDTO dto) {
-        return ResponseEntity.ok(orderService.updateOrderStatus(orderId, dto.getOrderStatus()));
+
+        Order updatedOrder = orderService.updateOrderStatus(orderId, dto.getOrderStatus());
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "Order status updated successfully.");
+        response.put("order", updatedOrder);
+
+        return ResponseEntity.ok(response);
     }
 
     // Dashboard stats (today, total, 5 recent)

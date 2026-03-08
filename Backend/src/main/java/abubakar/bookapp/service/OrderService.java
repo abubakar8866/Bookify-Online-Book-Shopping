@@ -50,11 +50,12 @@ public class OrderService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Order must contain at least one item.");
         }
 
-        float total = 0f;
+        float subtotal = 0f;
 
         for (OrderItem item : order.getItems()) {
             Book book = bookRepository.findById(item.getBookId())
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.NOT_FOUND,
                             "Book not found with ID: " + item.getBookId()));
 
             int newQuantity = book.getQuantity() - item.getQuantity();
@@ -66,17 +67,26 @@ public class OrderService {
             book.setQuantity(newQuantity);
             bookRepository.save(book);
 
-            // Snapshot details
             item.setBookName(book.getName());
             item.setUnitPrice(book.getPrice().floatValue());
-            item.setSubtotal(book.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())).floatValue());
+
+            float itemSubtotal = book.getPrice()
+                    .multiply(BigDecimal.valueOf(item.getQuantity()))
+                    .floatValue();
+
+            item.setSubtotal(itemSubtotal);
             item.setAuthorName(book.getAuthor() != null ? book.getAuthor().getName() : "Unknown");
             item.setOrder(order);
 
-            total += item.getSubtotal();
+            subtotal += itemSubtotal;
         }
 
-        order.setTotal(total);
+        float gst = subtotal * 0.05f;
+        float grandTotal = subtotal + gst;
+
+        order.setSubtotal(subtotal);
+        order.setGst(gst);
+        order.setTotal(grandTotal);
 
         if (order.getUser() != null) {
             cartRepository.deleteByUserId(order.getUser().getId());
@@ -101,9 +111,34 @@ public class OrderService {
 
     // Update only order status (Admin)
     public Order updateOrderStatus(Long orderId, String orderStatus) {
+
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
                         "Order not found with ID: " + orderId));
+
+        if ("Cancelled".equalsIgnoreCase(orderStatus)
+                && !"Cancelled".equalsIgnoreCase(order.getOrderStatus())) {
+
+            // restore stock
+            for (OrderItem item : order.getItems()) {
+                bookRepository.findById(item.getBookId()).ifPresent(book -> {
+                    book.setQuantity(book.getQuantity() + item.getQuantity());
+                    bookRepository.save(book);
+                });
+            }
+
+            // refund logic
+            RazorpayInfo info = razorpayInfoRepository.findByOrderId(orderId);
+
+            if ("UPI".equalsIgnoreCase(order.getOrderMode()) && info != null) {
+                try {
+                    paymentService.refundPayment(info.getRazorpayPaymentId(), order.getTotal());
+                } catch (Exception e) {
+                    System.out.println("Refund failed: " + e.getMessage());
+                }
+            }
+        }
 
         order.setOrderStatus(orderStatus);
         return orderRepository.save(order);
@@ -180,6 +215,7 @@ public class OrderService {
 
     @Transactional
     public String removeOrderItem(Long orderId, Long bookId) {
+
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found."));
 
@@ -195,18 +231,24 @@ public class OrderService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Book not found in this order."));
 
-        // Refund logic (if UPI)
+        RazorpayInfo info = razorpayInfoRepository.findByOrderId(orderId);
         boolean refundProcessed = false;
-        if ("UPI".equalsIgnoreCase(order.getOrderMode())) {
-            RazorpayInfo info = razorpayInfoRepository.findByOrderId(orderId);
-            if (info != null) {
-                try {
-                    paymentService.refundPayment(info.getRazorpayPaymentId(), itemToRemove.getSubtotal());
-                    refundProcessed = true;
-                } catch (Exception e) {
-                    throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
-                            "Refund failed: " + e.getMessage(), e);
+
+        // Refund logic (only for UPI orders)
+        if ("UPI".equalsIgnoreCase(order.getOrderMode()) && info != null) {
+            try {
+                double refundAmount = itemToRemove.getSubtotal();
+
+                if (refundAmount > order.getTotal()) {
+                    refundAmount = order.getTotal();
                 }
+
+                paymentService.refundPayment(info.getRazorpayPaymentId(), refundAmount);
+                refundProcessed = true;
+
+            } catch (Exception e) {
+                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
+                        "Refund failed: " + e.getMessage(), e);
             }
         }
 
@@ -216,38 +258,43 @@ public class OrderService {
             bookRepository.save(book);
         });
 
-        // Remove item from the order
+        // Remove item
         order.getItems().remove(itemToRemove);
 
         String message;
 
         if (order.getItems().isEmpty()) {
-            // Delete the entire order if no items left
-            RazorpayInfo info = razorpayInfoRepository.findByOrderId(orderId);
+
             if (info != null) {
                 razorpayInfoRepository.delete(info);
             }
+
             orderRepository.delete(order);
 
-            if (refundProcessed) {
-                message = "All items were removed. Your order has been cancelled and the refund has been processed successfully.";
-            } else {
-                message = "All items were removed. Your order has been cancelled successfully.";
-            }
+            message = refundProcessed
+                    ? "All items were removed. Your order has been cancelled and the refund has been processed successfully."
+                    : "All items were removed. Your order has been cancelled successfully.";
+
         } else {
-            // Recalculate order total
-            float newTotal = (float) order.getItems().stream()
-                    .mapToDouble(OrderItem::getSubtotal)
-                    .sum();
-            order.setTotal(newTotal);
+
+            // Recalculate order amounts using BigDecimal
+            BigDecimal subtotal = order.getItems().stream()
+                    .map(item -> BigDecimal.valueOf(item.getSubtotal()))
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            BigDecimal gst = subtotal.multiply(new BigDecimal("0.05"));
+            BigDecimal total = subtotal.add(gst);
+
+            order.setSubtotal(subtotal.floatValue());
+            order.setGst(gst.floatValue());
+            order.setTotal(total.floatValue());
             order.setUpdatedAt(LocalDateTime.now());
+
             orderRepository.save(order);
 
-            if (refundProcessed) {
-                message = "The selected item was removed and the refund has been processed successfully.";
-            } else {
-                message = "The selected item was removed successfully.";
-            }
+            message = refundProcessed
+                    ? "The selected item was removed and the refund has been processed successfully."
+                    : "The selected item was removed successfully.";
         }
 
         return message;

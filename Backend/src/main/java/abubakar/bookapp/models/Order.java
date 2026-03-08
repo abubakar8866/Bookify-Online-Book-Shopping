@@ -23,10 +23,16 @@ public class Order {
     private String userName;
 
     @Column(nullable = false)
+    private float subtotal;
+
+    @Column(nullable = false)
+    private float gst;
+
+    @Column(nullable = false)
     private float total;
 
     @Column(name = "order_mode", nullable = false)
-    private String orderMode;  // e.g., "CASH", "UPI"
+    private String orderMode; // e.g., "CASH", "UPI"
 
     @Column(name = "order_status", nullable = false)
     private String orderStatus;

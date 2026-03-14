@@ -66,11 +66,10 @@ public class OrderAdminController {
             @PathVariable Long orderId,
             @RequestBody OrderStatusUpdateDTO dto) {
 
-        Order updatedOrder = orderService.updateOrderStatus(orderId, dto.getOrderStatus());
+        String message = orderService.updateOrderStatus(orderId, dto.getOrderStatus());
 
         Map<String, Object> response = new HashMap<>();
-        response.put("message", "Order status updated successfully.");
-        response.put("order", updatedOrder);
+        response.put("message", message);
 
         return ResponseEntity.ok(response);
     }

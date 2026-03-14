@@ -1,6 +1,6 @@
 import axios from "axios";
 
-import {jwtDecode} from "jwt-decode";
+import { jwtDecode } from "jwt-decode";
 
 const API = axios.create({
   baseURL: "http://localhost:8080/api",
@@ -25,7 +25,7 @@ export function setAuthToken(token, role) {
     } else {
       API.get(`/auth/email/${decoded.sub}`)
         .then(response => {
-          const userId = response.data.userId; 
+          const userId = response.data.userId;
           localStorage.setItem('userId', userId);
         })
         .catch(error => {
@@ -78,7 +78,7 @@ export function forgotPassword(email) {
 }
 
 //Reset Password
-export function resetPassword(token, newPassword){
+export function resetPassword(token, newPassword) {
   return API.post(`/auth/reset-password?token=${token}&newPassword=${newPassword}`);
 }
 
@@ -150,8 +150,8 @@ export async function getAuthorNames() {
 }
 
 //Search
-export async function searchByName(name,page,size){
-  return API.get(`/authors/search`, { params: { name, page, size }});
+export async function searchByName(name, page, size) {
+  return API.get(`/authors/search`, { params: { name, page, size } });
 }
 
 /* -------------------- HELPERS -------------------- */
@@ -197,8 +197,8 @@ export function deleteBook(id) {
 }
 
 //Search
-export function searchBooksByName(name,page,size) {
-  return API.get(`/books/search`, { params: { name, page, size }});
+export function searchBooksByName(name, page, size) {
+  return API.get(`/books/search`, { params: { name, page, size } });
 }
 
 /* -------------------- User BOOKS -------------------- */
@@ -209,15 +209,15 @@ export function getUserBooks(page = 0, size = 3) {
 }
 
 //Search
-export function searchUserBooksByName(name,page,size) {
-  return API.get(`/user/books/search`, { params: { name, page, size }});
+export function searchUserBooksByName(name, page, size) {
+  return API.get(`/user/books/search`, { params: { name, page, size } });
 }
 
 /* -------------------- WISHLIST -------------------- */
 
 // Add book to wishlist
 export function addToWishlist(userId, bookId) {
-  return API.post(`/wishlist/${userId}/${bookId}`,{});
+  return API.post(`/wishlist/${userId}/${bookId}`, {});
 }
 
 // Get user wishlist
@@ -234,7 +234,7 @@ export function removeFromWishlist(userId, wishlistId) {
 
 // Add book to cart
 export function addToCart(userId, cartId) {
-  return API.post(`/cart/${userId}/${cartId}`,{});
+  return API.post(`/cart/${userId}/${cartId}`, {});
 }
 
 // Get user cart
@@ -280,14 +280,14 @@ export function removeOrderItem(orderId, bookId) {
 }
 
 // Print order (only for delivered orders)
-export function printOrder(orderId, orderStatus) {
-  return API.get(`/order/${orderId}/print/${orderStatus}`);
+export function printOrder(orderId) {
+  return API.get(`/order/${orderId}/print`);
 }
 
 /* -------------------- PAYMENT (RAZORPAY) -------------------- */
 
 //Feching RazerPayKey
-export function fetchRazerpayKey(){
+export function fetchRazerpayKey() {
   return API.get("/payment/key");
 }
 
@@ -308,7 +308,7 @@ export function placeRazorpayOrder(data) {
 }
 
 //fetching Razorpay Info from DB 
-export function fetchingRazorpayInfo(orderId){
+export function fetchingRazorpayInfo(orderId) {
   return API.get(`/payment/info/${orderId}`);
 }
 

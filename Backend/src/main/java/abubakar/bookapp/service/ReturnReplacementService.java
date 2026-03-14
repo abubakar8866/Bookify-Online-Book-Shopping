@@ -224,15 +224,25 @@ public class ReturnReplacementService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid quantity");
         }
 
-        // ---------------- COMMON LOGIC ----------------
-        adjustOrderForReturnOrReplacement(order, rr, qty);
-
         // ---------------- TYPE-SPECIFIC LOGIC ----------------
         if ("REPLACEMENT".equalsIgnoreCase(rr.getType())) {
+
+            // First check stock availability
+            checkReplacementStock(rr.getBookId(), qty);
+
+            // Adjust order item quantity
+            adjustOrderForReturnOrReplacement(order, rr, qty);
+
+            // Then decrease stock
             decreaseBookStock(rr.getBookId(), qty);
+
             rr.setDeliveryDate(LocalDateTime.now().plusDays(3));
+
+        } else {
+
+            // RETURN case
+            adjustOrderForReturnOrReplacement(order, rr, qty);
         }
-        // RETURN: no stock restocking
 
         // Save changes
         orderService.saveOrder(order);
@@ -256,10 +266,17 @@ public class ReturnReplacementService {
                     orderItem.setSubtotal(orderItem.getUnitPrice() * newQty);
                 });
 
-        float newTotal = (float) order.getItems().stream()
+        float subtotal = (float) order.getItems().stream()
                 .mapToDouble(OrderItem::getSubtotal)
                 .sum();
-        order.setTotal(newTotal);
+
+        float gst = subtotal * 0.05f;
+
+        float total = subtotal + gst;
+
+        order.setSubtotal(subtotal);
+        order.setGst(gst);
+        order.setTotal(total);
     }
 
     /**
@@ -280,7 +297,7 @@ public class ReturnReplacementService {
         bookRepository.save(book);
     }
 
-    //print
+    // print
     public ReturnReplacement getPrintableRequest(Long id) {
         ReturnReplacement rr = repo.findById(id)
                 .orElseThrow(
@@ -306,6 +323,21 @@ public class ReturnReplacementService {
 
     public ReturnReplacement save(ReturnReplacement rr) {
         return repo.save(rr);
+    }
+
+    private void checkReplacementStock(Long bookId, int qty) {
+
+        if (bookId == null || qty <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid replacement request");
+        }
+
+        Book book = bookRepository.findById(bookId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Book not found"));
+
+        if (book.getQuantity() < qty) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Replacement cannot be processed. Product is out of stock.");
+        }
     }
 
 }

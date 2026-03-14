@@ -110,17 +110,19 @@ public class OrderService {
     }
 
     // Update only order status (Admin)
-    public Order updateOrderStatus(Long orderId, String orderStatus) {
+    public String updateOrderStatus(Long orderId, String orderStatus) {
 
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
                         "Order not found with ID: " + orderId));
 
+        String message;
+
         if ("Cancelled".equalsIgnoreCase(orderStatus)
                 && !"Cancelled".equalsIgnoreCase(order.getOrderStatus())) {
 
-            // restore stock
+            // Restore stock
             for (OrderItem item : order.getItems()) {
                 bookRepository.findById(item.getBookId()).ifPresent(book -> {
                     book.setQuantity(book.getQuantity() + item.getQuantity());
@@ -128,20 +130,54 @@ public class OrderService {
                 });
             }
 
-            // refund logic
             RazorpayInfo info = razorpayInfoRepository.findByOrderId(orderId);
 
             if ("UPI".equalsIgnoreCase(order.getOrderMode()) && info != null) {
+
                 try {
-                    paymentService.refundPayment(info.getRazorpayPaymentId(), order.getTotal());
+
+                    double refunded = info.getRefundedAmount() == null ? 0.0 : info.getRefundedAmount();
+                    double remainingRefund = order.getTotal() - refunded;
+
+                    if (remainingRefund > 0) {
+
+                        paymentService.refundPayment(info.getRazorpayPaymentId(), remainingRefund);
+
+                        refunded += remainingRefund;
+
+                        info.setRefundedAmount(refunded);
+
+                        if (refunded >= order.getTotal()) {
+                            info.setFullyRefunded(true);
+                        }
+
+                        razorpayInfoRepository.save(info);
+
+                        message = "Order cancelled and refund processed successfully.";
+
+                    } else {
+                        message = "Order cancelled successfully. Refund already completed.";
+                    }
+
                 } catch (Exception e) {
-                    System.out.println("Refund failed: " + e.getMessage());
+
+                    message = "Order cancelled but refund failed: " + e.getMessage();
                 }
+
+            } else {
+
+                message = "Order cancelled successfully.";
             }
+
+        } else {
+
+            message = "Order status updated to " + orderStatus + " successfully.";
         }
 
         order.setOrderStatus(orderStatus);
-        return orderRepository.save(order);
+        orderRepository.save(order);
+
+        return message;
     }
 
     // Edit order by ID
@@ -170,6 +206,7 @@ public class OrderService {
     // Remove an entire order
     @Transactional
     public String removeOrder(Long orderId) {
+
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Order not found with ID: " + orderId));
@@ -179,19 +216,42 @@ public class OrderService {
                     "You cannot delete a delivered order.");
         }
 
-        // If payment mode is UPI, initiate refund
         RazorpayInfo info = razorpayInfoRepository.findByOrderId(orderId);
+
         String message;
+
         if ("UPI".equalsIgnoreCase(order.getOrderMode()) && info != null) {
+
             try {
-                paymentService.refundPayment(info.getRazorpayPaymentId(), order.getTotal());
-                razorpayInfoRepository.delete(info);
-                message = "Your order has been cancelled and your refund has been processed successfully.";
+
+                double refunded = info.getRefundedAmount() == null ? 0.0 : info.getRefundedAmount();
+                double remainingRefund = order.getTotal() - refunded;
+
+                if (remainingRefund > 0) {
+
+                    paymentService.refundPayment(info.getRazorpayPaymentId(), remainingRefund);
+
+                    refunded += remainingRefund;
+
+                    info.setRefundedAmount(refunded);
+
+                    if (refunded >= order.getTotal()) {
+                        info.setFullyRefunded(true);
+                    }
+
+                    razorpayInfoRepository.save(info);
+                }
+
+                message = "Your order has been cancelled and refund processed successfully.";
+
             } catch (Exception e) {
+
                 throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
                         "Refund failed: " + e.getMessage(), e);
             }
+
         } else {
+
             message = "Your order has been cancelled successfully.";
         }
 
@@ -204,15 +264,22 @@ public class OrderService {
                 });
             }
         }
-        // Load items to ensure cascade triggers
+
+        // Delete Razorpay info if exists
+        if (info != null) {
+            razorpayInfoRepository.delete(info);
+        }
+
+        // Ensure items are loaded before deletion
         order.getItems().size();
 
-        // Use delete(order) instead of deleteById(orderId)
+        // Delete order
         orderRepository.delete(order);
 
         return message;
     }
 
+    // Remove one item from order
     @Transactional
     public String removeOrderItem(Long orderId, Long bookId) {
 
@@ -232,21 +299,39 @@ public class OrderService {
                         "Book not found in this order."));
 
         RazorpayInfo info = razorpayInfoRepository.findByOrderId(orderId);
+
         boolean refundProcessed = false;
 
-        // Refund logic (only for UPI orders)
         if ("UPI".equalsIgnoreCase(order.getOrderMode()) && info != null) {
+
             try {
+
+                double refunded = info.getRefundedAmount() == null ? 0.0 : info.getRefundedAmount();
+                double remainingRefund = order.getTotal() - refunded;
+
                 double refundAmount = itemToRemove.getSubtotal();
 
-                if (refundAmount > order.getTotal()) {
-                    refundAmount = order.getTotal();
+                refundAmount = Math.min(refundAmount, remainingRefund);
+
+                if (refundAmount > 0) {
+
+                    paymentService.refundPayment(info.getRazorpayPaymentId(), refundAmount);
+
+                    refunded += refundAmount;
+
+                    info.setRefundedAmount(refunded);
+
+                    if (refunded >= order.getTotal()) {
+                        info.setFullyRefunded(true);
+                    }
+
+                    razorpayInfoRepository.save(info);
+
+                    refundProcessed = true;
                 }
 
-                paymentService.refundPayment(info.getRazorpayPaymentId(), refundAmount);
-                refundProcessed = true;
-
             } catch (Exception e) {
+
                 throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
                         "Refund failed: " + e.getMessage(), e);
             }
@@ -258,26 +343,20 @@ public class OrderService {
             bookRepository.save(book);
         });
 
-        // Remove item
         order.getItems().remove(itemToRemove);
 
         String message;
 
         if (order.getItems().isEmpty()) {
 
-            if (info != null) {
-                razorpayInfoRepository.delete(info);
-            }
-
             orderRepository.delete(order);
 
             message = refundProcessed
-                    ? "All items were removed. Your order has been cancelled and the refund has been processed successfully."
-                    : "All items were removed. Your order has been cancelled successfully.";
+                    ? "All items removed and refund processed successfully."
+                    : "All items removed and order cancelled.";
 
         } else {
 
-            // Recalculate order amounts using BigDecimal
             BigDecimal subtotal = order.getItems().stream()
                     .map(item -> BigDecimal.valueOf(item.getSubtotal()))
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -293,8 +372,8 @@ public class OrderService {
             orderRepository.save(order);
 
             message = refundProcessed
-                    ? "The selected item was removed and the refund has been processed successfully."
-                    : "The selected item was removed successfully.";
+                    ? "Item removed and refund processed successfully."
+                    : "Item removed successfully.";
         }
 
         return message;
@@ -335,12 +414,14 @@ public class OrderService {
 
     // Print order (Delivered only)
     @Transactional
-    public Order printOrder(Long orderId, String orderStatus) {
+    public Order printOrder(Long orderId) {
+
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found."));
 
-        if (!"Delivered".equalsIgnoreCase(orderStatus)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+        if (!"Delivered".equalsIgnoreCase(order.getOrderStatus())) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
                     "Printing is allowed only for delivered orders.");
         }
 
@@ -349,23 +430,34 @@ public class OrderService {
 
     // Dashboard stats
     public OrderStatsDTO getOrderStats() {
+
         LocalDateTime startOfToday = LocalDate.now().atStartOfDay();
 
-        long todaysOrderCount = orderRepository.countByCreatedAtAfter(startOfToday);
-        long totalOrdersCount = orderRepository.count();
+        // Today's orders
+        long todaysOrderCount = orderRepository.countTodaysOrders(startOfToday);
 
+        // Total orders excluding cancelled
+        long totalOrdersCount = orderRepository.countTotalOrders();
+
+        // Today's sales
         BigDecimal todaysOrderTotal = Optional.ofNullable(orderRepository.sumTodaysOrders(startOfToday))
                 .map(BigDecimal::valueOf)
                 .orElse(BigDecimal.ZERO);
 
+        // Total sales excluding cancelled
         BigDecimal totalOrderAmount = Optional.ofNullable(orderRepository.sumTotalOrders())
                 .map(BigDecimal::valueOf)
                 .orElse(BigDecimal.ZERO);
 
+        // Latest orders
         List<Order> recentOrders = orderRepository.findTop5ByOrderByCreatedAtDesc();
 
         return new OrderStatsDTO(
-                todaysOrderCount, totalOrdersCount, todaysOrderTotal, totalOrderAmount, recentOrders);
+                todaysOrderCount,
+                totalOrdersCount,
+                todaysOrderTotal,
+                totalOrderAmount,
+                recentOrders);
     }
 
     // Range stats (weekly/monthly)

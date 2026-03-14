@@ -78,9 +78,9 @@ export default function Login() {
     setSending(true);
     try {
       const res = await forgotPassword(forgotEmail);
-      setForgotMsg(res.data);
+      setForgotMsg(res.data.message);
     } catch (err) {
-      setForgotMsg(err.response?.data || "Failed to send reset email");
+      setForgotMsg(err.response?.data?.message || "Failed to send reset email");
     } finally {
       setSending(false);
     }
@@ -170,6 +170,19 @@ export default function Login() {
             >
               Forgot Password?
             </button>
+          </div>
+
+          {/* Register Link */}
+          <div className="text-center mt-2">
+            <span className="text-muted">Don't have an account? </span>
+            <span
+              role="button"
+              className="text-primary fw-semibold"
+              style={{ cursor: "pointer" }}
+              onClick={() => nav("/register")}
+            >
+              Register
+            </span>
           </div>
 
         </form>

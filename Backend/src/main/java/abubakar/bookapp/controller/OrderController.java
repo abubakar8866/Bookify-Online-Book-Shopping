@@ -79,12 +79,9 @@ public class OrderController {
     }
 
     // Print order (only for delivered orders)
-    @GetMapping("/{orderId}/print/{orderStatus}")
-    public ResponseEntity<Order> printOrder(
-            @PathVariable Long orderId,
-            @PathVariable String orderStatus) {
-        Order printedOrder = orderService.printOrder(orderId, orderStatus);
-        return ResponseEntity.ok(printedOrder);
+    @GetMapping("/{orderId}/print")
+    public ResponseEntity<Order> printOrder(@PathVariable Long orderId) {
+        return ResponseEntity.ok(orderService.printOrder(orderId));
     }
 
 }

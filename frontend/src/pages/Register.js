@@ -154,6 +154,18 @@ export default function Register() {
             Reset
           </button>
 
+          <div className="text-center mt-3">
+            <span className="text-muted">Already have an account? </span>
+            <span
+              role="button"
+              className="text-primary fw-semibold"
+              style={{ cursor: "pointer" }}
+              onClick={() => nav("/login")}
+            >
+              Login
+            </span>
+          </div>
+
         </form>
       </div>
     </div>

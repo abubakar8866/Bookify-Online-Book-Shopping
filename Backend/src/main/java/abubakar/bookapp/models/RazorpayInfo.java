@@ -17,6 +17,10 @@ public class RazorpayInfo {
     private String razorpayPaymentId;
     private String razorpaySignature;
 
+    private Double refundedAmount = 0.0;
+
+    private Boolean fullyRefunded = false;
+
     @OneToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "order_id")
     private Order order;

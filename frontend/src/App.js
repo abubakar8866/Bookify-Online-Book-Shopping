@@ -16,6 +16,7 @@ import AdminOrders from "./pages/AdminOrdersPage";
 import InformationPage from "./pages/InformationPage";
 import ReturnReplacementTable from "./pages/ReturnReplacementTable";
 import AdminReturnReplacementPage from "./pages/AdminReturnReplacementPage";
+import ResetPassword from "./pages/ResetPassword";
 
 // Protected Route Wrapper
 function ProtectedRoute({ children, role }) {
@@ -58,9 +59,10 @@ function App() {
             {/* Default route goes to login */}
             <Route path="/" element={<Navigate to="/login" replace />} />
 
-            {/* Public Routes */}
+            {/* Public Routes */}            
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
 
             {/* Profile (accessible to both roles) */}
             <Route

@@ -64,12 +64,18 @@ public class UserService {
             return "Password reset email sent successfully";
 
         } catch (Exception e) {
+            e.printStackTrace();
             throw new RuntimeException("Failed to send reset email", e);
         }
     }
 
     // Reset password
     public String resetPassword(String token, String newPassword) {
+
+        if (newPassword == null || newPassword.trim().isEmpty()) {
+            throw new IllegalArgumentException("Password cannot be empty");
+        }
+
         User user = userRepository.findByResetToken(token)
                 .orElseThrow(() -> new InvalidTokenException("Invalid password reset token"));
 
@@ -80,7 +86,9 @@ public class UserService {
         user.setPassword(passwordEncoder.encode(newPassword));
         user.setResetToken(null);
         user.setTokenExpiry(null);
+
         userRepository.save(user);
+
         return "Password reset successfully";
     }
 

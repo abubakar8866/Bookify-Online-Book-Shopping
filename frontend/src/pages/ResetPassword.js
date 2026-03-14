@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import {resetPassword} from "../api";
+import { resetPassword } from "../api";
 import '../../src/style/All.css';
 
 export default function ResetPassword() {
@@ -23,8 +23,8 @@ export default function ResetPassword() {
     const newErrors = {};
     if (!password.trim()) {
       newErrors.password = "Password is required";
-    } else if (password.length < 6 || password.length > 20) {
-      newErrors.password = "Password must be between 6 and 20 characters";
+    } else if (password.length < 8 || password.length > 15) {
+      newErrors.password = "Password must be between 8 and 15 characters";
     }
     if (!confirmPassword.trim()) {
       newErrors.confirmPassword = "Confirm Password is required";
@@ -39,6 +39,11 @@ export default function ResetPassword() {
     setErrors({});
     setMsg("");
 
+    if (!token) {
+      setMsg("Invalid or missing reset token");
+      return;
+    }
+
     const validationErrors = validate();
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
@@ -46,13 +51,15 @@ export default function ResetPassword() {
     }
 
     try {
-      const res = await resetPassword(token,password);
-      setMsg(res.data);
-      setTimeout(() => nav("/login"), 2000);
-    } catch (err) {
-      setMsg(err.response?.data || "Failed to reset password");
-    }
+      const res = await resetPassword(token, password);
 
+      setMsg(res.data || "Password reset successfully");
+
+      setTimeout(() => nav("/login"), 2000);
+
+    } catch (err) {
+      setMsg(err.response?.data?.message || "Failed to reset password");
+    }
   };
 
   const handleReset = () => {
@@ -63,71 +70,96 @@ export default function ResetPassword() {
   };
 
   return (
-    <div className="container" style={{ maxWidth: 500 }}>
-      <h3 className="mb-3">Reset Password</h3>
+    <div
+      className="d-flex align-items-center justify-content-center"
+      style={{ height: "90vh" }}
+    >
+      <div className="card shadow-lg p-4" style={{ width: "100%", maxWidth: 450 }}>
 
-      {msg && <div className="alert alert-info">{msg}</div>}
-
-      <form onSubmit={handleSubmit}>
-        {/* Password */}
-        <div className="mb-3 position-relative">
-          <input
-            type={showPassword ? "text" : "password"}
-            className={`form-control ${errors.password ? "is-invalid" : ""}`}
-            placeholder="New Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          <span
-            className="position-absolute top-50 end-0 translate-middle-y me-3"
-            style={{ cursor: "pointer" }}
-            onClick={() => setShowPassword(!showPassword)}
-          >
-            <i className={`bi ${showPassword ? "bi-eye-slash" : "bi-eye"}`}></i>
-          </span>
-          {errors.password && (
-            <div className="invalid-feedback">{errors.password}</div>
-          )}
+        <div className="text-center mb-4">
+          <i className="bi bi-shield-lock text-primary" style={{ fontSize: 50 }}></i>
+          <h3 className="fw-bold mt-2">Reset Password</h3>
+          <p className="text-muted">Enter your new password</p>
         </div>
 
-        {/* Confirm Password */}
-        <div className="mb-3 position-relative">
-          <input
-            type={showConfirm ? "text" : "password"}
-            className={`form-control ${
-              errors.confirmPassword ? "is-invalid" : ""
-            }`}
-            placeholder="Confirm Password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-          />
-          <span
-            className="position-absolute top-50 end-0 translate-middle-y me-3"
-            style={{ cursor: "pointer" }}
-            onClick={() => setShowConfirm(!showConfirm)}
-          >
-            <i className={`bi ${showConfirm ? "bi-eye-slash" : "bi-eye"}`}></i>
-          </span>
-          {errors.confirmPassword && (
-            <div className="invalid-feedback">{errors.confirmPassword}</div>
-          )}
-        </div>
+        {msg && <div className="alert alert-info">{msg}</div>}
 
-        <div className="d-flex justify-content-between mt-3">
-          <button type="submit" className="btn btn-primary w-50">
+        <form onSubmit={handleSubmit}>
+
+          {/* Password */}
+          <div className="mb-3 position-relative">
+            <input
+              type={showPassword ? "text" : "password"}
+              className={`form-control ${errors.password ? "is-invalid no-invalid-icon" : ""}`}
+              placeholder="New Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              style={{ backgroundImage: "none" }}
+            />
+
+            <span
+              className={`position-absolute end-0 top-0 bottom-0 d-flex align-items-center pe-3 ${errors.password ? 'pb-4' : ''}`}
+              role="button"
+              onClick={() => setShowPassword(!showPassword)}
+            >
+              <i className={`bi ${showPassword ? "bi-eye-slash-fill" : "bi-eye-fill"}`}></i>
+            </span>
+
+            {errors.password && (
+              <div className="invalid-feedback">{errors.password}</div>
+            )}
+          </div>
+
+          {/* Confirm Password */}
+          <div className="mb-3 position-relative">
+            <input
+              type={showConfirm ? "text" : "password"}
+              className={`form-control ${errors.confirmPassword ? "is-invalid no-invalid-icon" : ""}`}
+              placeholder="Confirm Password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              style={{ backgroundImage: "none" }}
+            />
+
+            <span
+              className={`position-absolute end-0 top-0 bottom-0 d-flex align-items-center pe-3 ${errors.confirmPassword ? 'pb-4' : ''}`}
+              role="button"
+              onClick={() => setShowConfirm(!showConfirm)}
+            >
+              <i className={`bi ${showConfirm ? "bi-eye-slash-fill" : "bi-eye-fill"}`}></i>
+            </span>
+
+            {errors.confirmPassword && (
+              <div className="invalid-feedback">{errors.confirmPassword}</div>
+            )}
+          </div>
+
+          <button className="btn btn-primary w-100 mt-2 mb-2">
             Reset Password
           </button>
+
           <button
             type="button"
-            className="btn btn-warning"
-            style={{ width: "40%" }}
+            className="btn btn-outline-secondary w-100"
             onClick={handleReset}
           >
-            Reset
+            Clear
           </button>
-        </div>
-      </form>
-      
+
+          <div className="text-center mt-3">
+            <span className="text-muted">Remember your password? </span>
+            <span
+              role="button"
+              className="text-primary fw-semibold"
+              style={{ cursor: "pointer" }}
+              onClick={() => nav("/login")}
+            >
+              Login
+            </span>
+          </div>
+
+        </form>
+      </div>
     </div>
   );
 }

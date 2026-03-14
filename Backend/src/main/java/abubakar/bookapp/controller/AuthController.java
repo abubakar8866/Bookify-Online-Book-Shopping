@@ -157,8 +157,9 @@ public class AuthController {
     }
 
     @PostMapping("/forgot-password")
-    public String forgotPassword(@RequestParam String email) {
-        return userService.generateResetToken(email);
+    public ResponseEntity<?> forgotPassword(@RequestParam String email) {
+        String msg = userService.generateResetToken(email);
+        return ResponseEntity.ok(java.util.Map.of("message", msg));
     }
 
     @PostMapping("/reset-password")

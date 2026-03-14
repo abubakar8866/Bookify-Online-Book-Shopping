@@ -7,51 +7,75 @@ import AlertModal from '../components/AlertModal';
 
 function AdminOrderPage() {
     const [orders, setOrders] = useState([]);
-    const navigate = useNavigate();
     const [razorpayInfoMap, setRazorpayInfoMap] = useState({});
     const [modal, setModal] = useState({ show: false, title: "", message: "", type: "info" });
 
+    const navigate = useNavigate();
     const role = localStorage.getItem("role");
 
     useEffect(() => {
+
         if (role !== "ROLE_ADMIN") {
-            navigate("/"); // redirect non-admin users
+            navigate("/");
             return;
         }
 
+        loadOrders();
+
+    }, [navigate, role]);
+
+
+    const loadOrders = () => {
+
         getAllOrders()
             .then(res => {
-                const sorted = res.data.sort(
-                    (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-                );
+
+                const sorted = [...res.data]
+                    .filter(o => o && o.createdAt)
+                    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
                 setOrders(sorted);
 
-                // Fetch Razorpay info for UPI orders
+                // Fetch Razorpay info
                 sorted.forEach(order => {
+
                     if (order.orderMode === "UPI") {
+
                         getAllDetailsofRazorpay(order.id)
                             .then(infoRes => {
-                                setRazorpayInfoMap(prev => ({ ...prev, [order.id]: infoRes.data }));
+
+                                setRazorpayInfoMap(prev => ({
+                                    ...prev,
+                                    [order.id]: infoRes.data
+                                }));
+
                             })
                             .catch(error => {
                                 console.error(error);
-                                handleError(error, "Failed to fetch razerPay Info.");
+                                handleError(error, "Failed to fetch Razorpay Info.");
                             });
                     }
+
                 });
+
             })
             .catch(err => console.error("Failed to load orders:", err));
-    }, [navigate, role]);
+    };
 
-    const handleError = (error, fallbackMessage = "Something went wrong. Please try again.") => {
+
+    const handleError = (error, fallbackMessage = "Something went wrong.") => {
+
         let message = fallbackMessage;
 
         if (error.response && error.response.data) {
+
             if (typeof error.response.data === "string") {
                 message = error.response.data;
-            } else if (error.response.data.message) {
+            }
+            else if (error.response.data.message) {
                 message = error.response.data.message;
             }
+
         } else if (error.message) {
             message = error.message;
         }
@@ -60,23 +84,16 @@ function AdminOrderPage() {
             show: true,
             title: "Error",
             message,
-            type: "danger",
-            onConfirm: null
+            type: "danger"
         });
     };
+
 
     const handleStatusChange = (orderId, newStatus) => {
 
         updateOrderStatus(orderId, newStatus)
+
             .then(res => {
-
-                const updatedOrder = res.data.order;
-
-                setOrders(prev =>
-                    prev.map(order =>
-                        order.id === orderId ? updatedOrder : order
-                    )
-                );
 
                 setModal({
                     show: true,
@@ -85,38 +102,61 @@ function AdminOrderPage() {
                     type: "success"
                 });
 
+                // reload orders to avoid state corruption
+                loadOrders();
+
             })
+
             .catch(error => {
                 handleError(error, "Failed to update order status.");
             });
+
     };
 
+
     const groupOrdersByTime = (orders) => {
+
         return orders.reduce((groups, order) => {
+
+            if (!order || !order.createdAt) return groups;
+
             const timeKey = new Date(order.createdAt).toLocaleString();
+
             if (!groups[timeKey]) groups[timeKey] = [];
+
             groups[timeKey].push(order);
+
             return groups;
+
         }, {});
+
     };
+
 
     const groupedOrders = groupOrdersByTime(orders);
 
-    // Allowed status transitions
-    const statusOptions = ["Placed", "Processing", "Shipped", "Out for Delivery", "Delivered", "Cancelled"];
+
+    const statusOptions = [
+        "Placed",
+        "Processing",
+        "Shipped",
+        "Out for Delivery",
+        "Delivered",
+        "Cancelled"
+    ];
+
 
     const getAvailableStatuses = (currentStatus) => {
-        if (currentStatus === "Cancelled") {
-            return ["Cancelled"];
-        }
-        if (currentStatus === "Delivered") {
-            return ["Delivered"];
-        }
 
-        const currentIndex = statusOptions.indexOf(currentStatus);
-        if (currentIndex === -1) return [];
+        if (currentStatus === "Cancelled") return ["Cancelled"];
+        if (currentStatus === "Delivered") return ["Delivered"];
 
-        return [...statusOptions.slice(currentIndex, -1), "Cancelled"];
+        const index = statusOptions.indexOf(currentStatus);
+
+        if (index === -1) return [];
+
+        return [...statusOptions.slice(index, -1), "Cancelled"];
+
     };
 
     return (

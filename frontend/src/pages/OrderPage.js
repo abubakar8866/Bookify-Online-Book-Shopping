@@ -420,6 +420,26 @@ function OrderPage() {
     if (!returnForm.deliveryDate)
       newErrors.deliveryDate = "Delivery date is required.";
 
+    const today = new Date();
+    const minDate = today.toISOString().split("T")[0];
+
+    const maxDateObj = new Date();
+    maxDateObj.setDate(today.getDate() + 7);   // allow within 7 days
+    const maxDate = maxDateObj.toISOString().split("T")[0];
+
+    if (!returnForm.deliveryDate) {
+
+      newErrors.deliveryDate = "Delivery date is required.";
+
+    } else if (
+      returnForm.deliveryDate < minDate ||
+      returnForm.deliveryDate > maxDate
+    ) {
+
+      newErrors.deliveryDate = `Delivery date must be between ${minDate} and ${maxDate}.`;
+
+    }
+
     rsetErrors(newErrors);
 
     if (Object.keys(newErrors).length === 0) {
@@ -493,7 +513,7 @@ function OrderPage() {
 
     try {
       // Call backend validation
-      await printOrder(id, orderStatus);
+      await printOrder(id);
 
       // If backend allows, continue local print
       const subtotal = batch.reduce((sum, order) => sum + order.subtotal, 0);

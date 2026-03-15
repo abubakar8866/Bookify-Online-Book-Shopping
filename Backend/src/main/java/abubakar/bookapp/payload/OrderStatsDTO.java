@@ -30,7 +30,7 @@ public class OrderStatsDTO {
         this.recentOrders = recentOrders;
     }
 
-    // ✅ Safe getters
+    //Safe getters
     public BigDecimal getTodayTotal() {
         return todayTotal != null ? todayTotal : BigDecimal.ZERO;
     }

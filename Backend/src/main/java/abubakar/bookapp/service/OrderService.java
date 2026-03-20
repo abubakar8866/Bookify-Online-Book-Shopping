@@ -99,7 +99,7 @@ public class OrderService {
     public List<Order> getOrdersByUserId(Long userId) {
         List<Order> orders = orderRepository.findByUserId(userId);
         if (orders.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No orders found for user ID: " + userId);
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No orders found.");
         }
         return orders;
     }

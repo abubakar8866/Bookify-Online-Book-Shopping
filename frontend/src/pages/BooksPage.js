@@ -92,7 +92,7 @@ export default function AllBooksPage() {
     } catch (err) {
       console.error("Failed to fetch books.", err);
       setLoading(false);
-      handleError(err,'Failed to fetch books.');
+      handleError(err, 'Failed to fetch books.');
     }
   };
 
@@ -102,7 +102,7 @@ export default function AllBooksPage() {
       setAuthors(data);
     } catch (err) {
       console.error("Failed to fetch authors.", err);
-      handleError(err,'Failed to fetch authors.');
+      handleError(err, 'Failed to fetch authors.');
     }
   };
 
@@ -118,7 +118,7 @@ export default function AllBooksPage() {
         setTotalPages(0);
       } else {
         console.error("Search error:", err);
-        handleError(err,'Search Failed');
+        handleError(err, 'Search Failed');
       }
     } finally {
       setLoading(false);
@@ -235,7 +235,7 @@ export default function AllBooksPage() {
       setErrors({});
     } catch (err) {
       console.error("Error saving book", err);
-      handleError(err,'Failed to save books');
+      handleError(err, 'Failed to save books');
     }
   };
 
@@ -264,7 +264,7 @@ export default function AllBooksPage() {
           }
         } catch (err) {
           console.error("Error deleting book.", err);
-          handleError(err,"Failed to delete book.");
+          handleError(err, "Failed to delete book.");
         }
       },
     });
@@ -292,7 +292,7 @@ export default function AllBooksPage() {
     setSearchTerm(value);
     setPage(0);
   }
-  
+
   return (
     <div className="container mt-3 mb-2" style={{ maxWidth: "90vw" }}>
       <div className="d-flex justify-content-between mb-3 mt-2 align-items-center flex-wrap gap-2">
@@ -347,12 +347,14 @@ export default function AllBooksPage() {
                       }}
                     />
                     {/* Rating Badge */}
-                    <span
-                      className="badge bg-warning text-dark position-absolute top-0 end-0 m-2"
-                      style={{ fontSize: "0.85rem" }}
-                    >
-                      ⭐ {book.averageRating ? book.averageRating.toFixed(1) : "N/A"}
-                    </span>
+                    {book.averageRating > 0 && (
+                      <span
+                        className="badge bg-warning text-light position-absolute top-0 end-0 m-2"
+                        style={{ fontSize: "0.85rem" }}
+                      >
+                        <i className="bi bi-star-fill"></i> {book.averageRating.toFixed(1)}
+                      </span>
+                    )}
                   </div>
 
                   {/* Card Body */}
@@ -360,7 +362,7 @@ export default function AllBooksPage() {
                     <h5 className="card-title text-truncate">{book.name}</h5>
 
                     <p className="card-text mb-1">
-                      💵 <strong>₹{book.price}</strong>
+                      <i className="bi bi-cash text-success"></i> <strong>₹{book.price}</strong>
                     </p>
 
                     {book.author && (
@@ -438,9 +440,9 @@ export default function AllBooksPage() {
                         />
                       </div>
                       <div className="col-md-6 mt-3">
-                        <p><strong>Price:</strong> ₹{selectedBook.price}</p>
-                        <p><strong>Quantity:</strong> {selectedBook.quantity}</p>
-                        <p><strong>Author:</strong> {selectedBook.author?.name}</p>
+                        <p><strong>Price:</strong>{" "} ₹{selectedBook.price}</p>
+                        <p><strong>Quantity:</strong>{" "} {selectedBook.quantity}</p>
+                        <p><strong>Author:</strong>{" "} {selectedBook.author?.name}</p>
 
                         {/* Scrollable description */}
                         <p
@@ -450,13 +452,19 @@ export default function AllBooksPage() {
                             overflowY: "auto",
                             whiteSpace: "pre-line",
                           }}
-                        >
+                        ><strong>Description:</strong>{" "}
                           {selectedBook.description}
                         </p>
 
-                        <p><strong>Rating:</strong> {selectedBook.averageRating?.toFixed(1) || 'N/A'} / 5</p>
-                        <p><small className="text-muted">📅 Published: {selectedBook.createdAt ? new Date(selectedBook.createdAt).toLocaleString() : 'N/A'}</small></p>
-                        <p><small className="text-muted">🔄 Updated: {selectedBook.updatedAt ? new Date(selectedBook.updatedAt).toLocaleString() : 'N/A'}</small></p>
+                        <p>
+                          <strong>Rating:</strong>{" "}
+                          {selectedBook.averageRating > 0
+                            ? selectedBook.averageRating.toFixed(1)
+                            : "-"}{" "}
+                          / 5
+                        </p>
+                        <p><strong>Published:</strong>{" "} {selectedBook.createdAt ? new Date(selectedBook.createdAt).toLocaleString() : '-'}</p>
+                        <p><strong>Updated:</strong>{" "} {selectedBook.updatedAt ? new Date(selectedBook.updatedAt).toLocaleString() : '-'}</p>
                       </div>
                     </div>
 

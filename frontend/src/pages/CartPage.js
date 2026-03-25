@@ -16,7 +16,7 @@ function CartPage() {
   const [modal, setModal] = useState({ show: false, title: "", message: "", type: "info", onConfirm: null });
 
   const navigate = useNavigate();
-  const userId = localStorage.getItem('userId');
+  const userId = sessionStorage.getItem('userId');
 
   useEffect(() => {
     if (!userId) {

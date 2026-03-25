@@ -21,7 +21,7 @@ import ResetPassword from "./pages/ResetPassword";
 // Protected Route Wrapper
 function ProtectedRoute({ children, role }) {
   if (!isAuthenticated()) {
-    localStorage.clear();
+    sessionStorage.clear();
     return <Navigate to="/login" replace />;
   }
 
@@ -39,7 +39,7 @@ function Logout() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    localStorage.clear();
+    sessionStorage.clear();
     navigate("/login", { replace: true });
   }, [navigate]);
 

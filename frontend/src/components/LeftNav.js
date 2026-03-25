@@ -16,7 +16,7 @@ function LeftNav() {
     } catch (error) {
       console.error("Logout failed:", error);
     } finally {
-      localStorage.clear();
+      sessionStorage.clear();
       navigate("/login", { replace: true });
     }
   };

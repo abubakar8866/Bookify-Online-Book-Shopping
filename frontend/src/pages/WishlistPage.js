@@ -9,7 +9,7 @@ function WishlistPage() {
   const [wishlistItems, setWishlistItems] = useState([]);
   const [modal, setModal] = useState({ show: false, title: "", message: "", type: "info" });
   const navigate = useNavigate();
-  const userId = localStorage.getItem('userId');
+  const userId = sessionStorage.getItem('userId');
 
   useEffect(() => {
     if (!userId) {

@@ -11,7 +11,7 @@ function AdminOrderPage() {
     const [modal, setModal] = useState({ show: false, title: "", message: "", type: "info" });
 
     const navigate = useNavigate();
-    const role = localStorage.getItem("role");
+    const role = sessionStorage.getItem("role");
 
     useEffect(() => {
 

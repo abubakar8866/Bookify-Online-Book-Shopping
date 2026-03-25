@@ -10,7 +10,7 @@ import "bootstrap-icons/font/bootstrap-icons.css";
 import '../../src/style/All.css';
 
   function Profile() {
-    const userId = localStorage.getItem("userId");
+    const userId = sessionStorage.getItem("userId");
     const [profile, setProfile] = useState({
       name: "",
       email: "",
@@ -131,7 +131,7 @@ import '../../src/style/All.css';
 
         if (dto.password) {
           setTimeout(() => {
-            localStorage.clear();
+            sessionStorage.clear();
             window.location.href = "/login";
           }, 1000);
         }

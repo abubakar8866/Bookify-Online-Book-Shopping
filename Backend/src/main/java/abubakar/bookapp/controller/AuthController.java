@@ -113,11 +113,10 @@ public class AuthController {
 
     @PostMapping("/logout")
     public ResponseEntity<?> logout() {
-        // Invalidate current JWT signing key — all existing tokens become invalid
-        jwtUtils.invalidateCurrentKey();
 
         return ResponseEntity.ok(
-                java.util.Map.of("message", "Logged out successfully. Token is now invalid."));
+                java.util.Map.of("message", "Logged out successfully."));
+
     }
 
     @PostMapping("/register-admin")

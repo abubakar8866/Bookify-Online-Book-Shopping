@@ -9,24 +9,25 @@ const API = axios.create({
 export function setAuthToken(token, role) {
   if (token) {
     API.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    localStorage.setItem('token', token);
-    if (role) localStorage.setItem('role', role);
+
+    sessionStorage.setItem('token', token);
+    if (role) sessionStorage.setItem('role', role);
 
     const decoded = jwtDecode(token);
 
     // Store email from sub
     if (decoded.sub) {
-      localStorage.setItem("email", decoded.sub);
+      sessionStorage.setItem("email", decoded.sub);
     }
 
     // Check if userId exists in token
     if (decoded.userId) {
-      localStorage.setItem('userId', decoded.userId);
+      sessionStorage.setItem('userId', decoded.userId);
     } else {
       API.get(`/auth/email/${decoded.sub}`)
         .then(response => {
           const userId = response.data.userId;
-          localStorage.setItem('userId', userId);
+          sessionStorage.setItem('userId', userId);
         })
         .catch(error => {
           console.error('Failed to fetch userId from email:', error);
@@ -36,15 +37,15 @@ export function setAuthToken(token, role) {
   } else {
     // Remove stored data if no token
     delete API.defaults.headers.common['Authorization'];
-    localStorage.removeItem('token');
-    localStorage.removeItem('role');
-    localStorage.removeItem('userId');
-    localStorage.removeItem('email');
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('role');
+    sessionStorage.removeItem('userId');
+    sessionStorage.removeItem('email');
   }
 }
 
 API.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
+  const token = sessionStorage.getItem("token");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }

@@ -99,7 +99,7 @@ export default function BooksPage() {
 
   const handleAddToCart = async (bookId) => {
     try {
-      const userId = localStorage.getItem("userId");
+      const userId = sessionStorage.getItem("userId");
       if (!userId) {
         nav("/login");
         return;
@@ -119,7 +119,7 @@ export default function BooksPage() {
 
   const handleAddToWishlist = async (bookId) => {
     try {
-      const userId = localStorage.getItem("userId");
+      const userId = sessionStorage.getItem("userId");
       if (!userId) {
         nav("/login");
         return;

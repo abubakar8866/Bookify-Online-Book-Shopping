@@ -52,7 +52,7 @@ function OrderPage() {
   const MAX_FILE_SIZE = 50 * 1024 * 1024;  //50MB - converted into bytes
   const ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png"];
 
-  const userId = localStorage.getItem('userId');
+  const userId = sessionStorage.getItem('userId');
 
   useEffect(() => {
     if (!userId) {
@@ -450,7 +450,7 @@ function OrderPage() {
   const submitReturnRequest = async () => {
     try {
       const requestData = {
-        userId: localStorage.getItem("userId"),
+        userId: sessionStorage.getItem("userId"),
         orderId: returnModal.order.id,
         bookId: returnModal.item.bookId,
         bookTitle: returnModal.item.bookName,

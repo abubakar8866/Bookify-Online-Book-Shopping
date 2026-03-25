@@ -1,9 +1,12 @@
-export const logout = () => { localStorage.removeItem('token'); window.location.href = '/login'; };
+export const logout = () => {
+  sessionStorage.clear();
+  window.location.href = '/login';
+};
 
 export function isAuthenticated() {
-    return !!localStorage.getItem("token");
+    return !!sessionStorage.getItem("token");
 }
   
 export function getUserRole() {
-    return localStorage.getItem("role"); 
+    return sessionStorage.getItem("role"); 
 }

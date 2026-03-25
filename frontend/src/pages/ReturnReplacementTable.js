@@ -26,7 +26,7 @@ const ReturnReplacementTable = () => {
     onConfirm: null,
   });
 
-  const userId = localStorage.getItem("userId");
+  const userId = sessionStorage.getItem("userId");
 
   // Fetch Requests
   useEffect(() => {

@@ -244,8 +244,8 @@ export function getCart(userId) {
 }
 
 // Get user name by user ID
-export function getUserNameByUserId(userId) {
-  return API.get(`/cart/${userId}/name`);
+export function getUserDetailsByUserId(userId) {
+  return API.get(`/cart/${userId}/details`);
 }
 
 // Remove from cart

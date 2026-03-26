@@ -21,7 +21,7 @@ public class OrderItem {
     private Order order;
 
     @Column(nullable = false)
-    private Long bookId; 
+    private Long bookId;
 
     @Column(nullable = false)
     private String bookName;
@@ -31,6 +31,12 @@ public class OrderItem {
 
     @Column(nullable = false)
     private int quantity;
+
+    @Column(nullable = false)
+    private int returnedQuantity = 0;
+
+    @Column(nullable = false)
+    private int replacedQuantity = 0;
 
     @Column(nullable = false)
     private float unitPrice;

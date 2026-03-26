@@ -545,6 +545,9 @@ function OrderPage() {
               <th style="border:1px solid #ddd; padding:8px;">Book</th>
               <th style="border:1px solid #ddd; padding:8px;">Author</th>
               <th style="border:1px solid #ddd; padding:8px;">Qty</th>
+              <th style="border:1px solid #ddd; padding:8px;">Returned</th>
+              <th style="border:1px solid #ddd; padding:8px;">Replaced</th>
+              <th style="border:1px solid #ddd; padding:8px;">Remaining</th>
               <th style="border:1px solid #ddd; padding:8px;">Price</th>
               <th style="border:1px solid #ddd; padding:8px;">Subtotal</th>
             </tr>
@@ -555,10 +558,14 @@ function OrderPage() {
             order.items.map(
               (item, ii) => `
                 <tr>
-                  <td style="border:1px solid #ddd; padding:8px;">${ii + 1}</td>
+                  <td style="border:1px solid #ddd; padding:8px;">${oi * 100 + ii + 1}</td>
                   <td style="border:1px solid #ddd; padding:8px;">${item.bookName}</td>
                   <td style="border:1px solid #ddd; padding:8px;">${item.authorName}</td>
                   <td style="border:1px solid #ddd; padding:8px;">${item.quantity}</td>
+                  <td style="border:1px solid #ddd; padding:8px;color:red; font-weight:bold;">${item.returnedQuantity || 0}</td>
+                  <td style="border:1px solid #ddd; padding:8px;color:orange; font-weight:bold;">${item.replacedQuantity || 0}</td>
+                  <td style="border:1px solid #ddd; padding:8px;color:green; font-weight:bold;">${item.quantity - (item.returnedQuantity || 0) -
+                (item.replacedQuantity || 0)}</td>
                   <td style="border:1px solid #ddd; padding:8px;">₹${item.unitPrice.toFixed(2)}</td>
                   <td style="border:1px solid #ddd; padding:8px;">₹${item.subtotal.toFixed(2)}</td>
                 </tr>
@@ -762,6 +769,9 @@ function OrderPage() {
                         <th>Name</th>
                         <th>Author</th>
                         <th>Quantity</th>
+                        <th>Returned</th>
+                        <th>Replaced</th>
+                        <th>Remaining</th>
                         <th>Price</th>
                         <th>Subtotal</th>
                         <th>Actions</th>
@@ -776,6 +786,15 @@ function OrderPage() {
                             <td>{item.bookName}</td>
                             <td>{item.authorName}</td>
                             <td>{item.quantity}</td>
+                            <td className="text-danger fw-bold">
+                              {item.returnedQuantity || 0}
+                            </td>
+                            <td className="text-warning fw-bold">
+                              {item.replacedQuantity || 0}
+                            </td>
+                            <td className="text-success fw-bold">
+                              {item.quantity - (item.returnedQuantity || 0) - (item.replacedQuantity || 0)}
+                            </td>
                             <td>₹{item.unitPrice.toFixed(2)}</td>
                             <td>₹{item.subtotal.toFixed(2)}</td>
                             <td>
@@ -838,6 +857,10 @@ function OrderPage() {
                               <button
                                 className="btn btn-sm"
                                 onClick={() => {
+                                  const remainingQty =
+                                    item.quantity -
+                                    (item.returnedQuantity || 0) -
+                                    (item.replacedQuantity || 0);
                                   if (order.orderStatus !== "Delivered") {
                                     setModal({
                                       show: true,
@@ -847,7 +870,7 @@ function OrderPage() {
                                       onConfirm: null
                                     });
                                     return;
-                                  } else if (item.quantity <= 0) {
+                                  } else if (remainingQty <= 0) {
                                     setModal({
                                       show: true,
                                       title: "Return & Replacement Restricted",
@@ -874,7 +897,7 @@ function OrderPage() {
                         if (order.orderMode === "UPI" && razorpayInfoMap[order.id]) {
                           rows.push(
                             <tr key={`razorpay-${order.id}`}>
-                              <td colSpan={7} style={{ backgroundColor: "#f8f9fa", padding: "2px" }}>
+                              <td colSpan={10} style={{ backgroundColor: "#f8f9fa", padding: "2px" }}>
                                 <strong>Razorpay Details:</strong>
                                 <table className="table table-sm table-bordered mt-2 mb-0" style={{ fontSize: "0.85rem" }}>
                                   <tbody>
@@ -1111,7 +1134,9 @@ function OrderPage() {
                         className={`form-control ${rerrors.quantity ? "is-invalid-custom" : ""
                           }`}
                         min={1}
-                        max={returnModal.item.quantity}
+                        max={returnModal.item.quantity -
+                          (returnModal.item.returnedQuantity || 0) -
+                          (returnModal.item.replacedQuantity || 0)}
                         value={returnForm.quantity}
                         onChange={(e) =>
                           setReturnForm({ ...returnForm, quantity: parseInt(e.target.value) })

@@ -10,6 +10,7 @@ import org.springframework.web.server.ResponseStatusException;
 import abubakar.bookapp.models.Book;
 import abubakar.bookapp.models.Cart;
 import abubakar.bookapp.models.User;
+import abubakar.bookapp.payload.UserDetailsDTO;
 import abubakar.bookapp.repository.CartRepository;
 import abubakar.bookapp.repository.UserRepository;
 
@@ -69,7 +70,7 @@ public class CartService {
     }
 
     // Get user name safely
-    public String getUserNameByUserId(Long userId) {
+    public UserDetailsDTO getUserDetailsByUserId(Long userId) {
         if (userId == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User ID cannot be null.");
         }
@@ -77,7 +78,9 @@ public class CartService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found."));
 
-        return user.getName();
+        return new UserDetailsDTO(
+                user.getName(),
+                user.getAddress());
     }
 
     // Remove specific item from user's cart

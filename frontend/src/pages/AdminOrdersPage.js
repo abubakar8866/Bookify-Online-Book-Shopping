@@ -212,6 +212,9 @@ function AdminOrderPage() {
                                                 <th>Name</th>
                                                 <th>Author</th>
                                                 <th>Quantity</th>
+                                                <th>Returned</th>
+                                                <th>Replaced</th>
+                                                <th>Remaining</th>
                                                 <th>Unit Price</th>
                                                 <th>Subtotal</th>
                                             </tr>
@@ -224,6 +227,15 @@ function AdminOrderPage() {
                                                         <td>{item.bookName}</td>
                                                         <td>{item.authorName}</td>
                                                         <td>{item.quantity}</td>
+                                                        <td className="text-danger fw-bold">{item.returnedQuantity || 0}</td>
+                                                        <td className="text-success fw-bold">{item.replacedQuantity || 0}</td>
+                                                        <td className="fw-bold text-primary">
+                                                            {(
+                                                                (item.quantity || 0)
+                                                                - (item.returnedQuantity || 0)
+                                                                - (item.replacedQuantity || 0)
+                                                            )}
+                                                        </td>
                                                         <td>{item.unitPrice.toFixed(2)}</td>
                                                         <td>{item.subtotal.toFixed(2)}</td>
                                                     </tr>
@@ -233,7 +245,7 @@ function AdminOrderPage() {
                                                 if (order.orderMode === "UPI" && razorpayInfoMap[order.id]) {
                                                     rows.push(
                                                         <tr key={`razorpay-${order.id}`}>
-                                                            <td colSpan={6} style={{ backgroundColor: "#f8f9fa", padding: "2px" }}>
+                                                            <td colSpan={8} style={{ backgroundColor: "#f8f9fa", padding: "2px" }}>
                                                                 <strong>Razorpay Details:</strong>
                                                                 <table className="table table-sm table-bordered mt-2 mb-0" style={{ fontSize: "0.85rem" }}>
                                                                     <tbody>

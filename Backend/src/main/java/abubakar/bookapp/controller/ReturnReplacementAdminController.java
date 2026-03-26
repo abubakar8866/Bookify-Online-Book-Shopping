@@ -61,24 +61,27 @@ public class ReturnReplacementAdminController {
     // Refund Money Api by RazerPay
     @PutMapping("/refund/{returnId}")
     public ResponseEntity<?> refundReturnRequest(@PathVariable Long returnId) {
+
         ReturnReplacement rr = service.getRequestById(returnId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Return request not found"));
 
-        // Extra safety check
+        // Only approved can be refunded
         if (!"APPROVED".equalsIgnoreCase(rr.getStatus())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Return must be approved before refunding.");
         }
 
+        // Prevent duplicate refund
         if ("REFUNDED".equalsIgnoreCase(rr.getStatus())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Request already refunded.");
         }
 
         RazorpayInfo info = paymentService.getRazorpayInfoByOrderId(rr.getOrderId());
-        if (info == null)
+        if (info == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Razorpay transaction info not found.");
-        
+        }
+
         Order order = orderService.getOrderById(rr.getOrderId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
 
@@ -87,14 +90,58 @@ public class ReturnReplacementAdminController {
                 .findFirst()
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Book not found in order"));
 
-        double refundAmount = rr.getQuantity() * item.getUnitPrice();
+        int qty = rr.getQuantity();
 
+        // SAFETY CHECK (VERY IMPORTANT)
+        int remaining = item.getQuantity()
+                - item.getReturnedQuantity()
+                - item.getReplacedQuantity();
+
+        if (qty > remaining) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Refund exceeds allowed returnable quantity. Remaining: " + remaining);
+        }
+
+        // Calculate refund
+        double refundAmount = qty * item.getUnitPrice();
+
+        // Call Razorpay
         Refund refund = paymentService.refundPayment(info.getRazorpayPaymentId(), refundAmount);
 
+        // UPDATE ORDER ITEM RETURN COUNT
+        item.setReturnedQuantity(item.getReturnedQuantity() + qty);
+
+        // Recalculate subtotal (IMPORTANT)
+        int effectiveQty = item.getQuantity()
+                - item.getReturnedQuantity()
+                - item.getReplacedQuantity();
+
+        if (effectiveQty < 0)
+            effectiveQty = 0;
+
+        item.setSubtotal(item.getUnitPrice() * effectiveQty);
+
+        // Recalculate order totals
+        float subtotal = (float) order.getItems().stream()
+                .mapToDouble(OrderItem::getSubtotal)
+                .sum();
+
+        float gst = subtotal * 0.05f;
+        float total = subtotal + gst;
+
+        order.setSubtotal(subtotal);
+        order.setGst(gst);
+        order.setTotal(total);
+
+        // Save updated order
+        orderService.saveOrder(order);
+
+        // Update return request
         rr.setStatus("REFUNDED");
         rr.setRefundedAmount(refundAmount);
         rr.setProcessedDate(LocalDateTime.now());
         rr.setPaymentId(info.getRazorpayPaymentId());
+
         service.save(rr);
 
         return ResponseEntity.ok(refund.toString());

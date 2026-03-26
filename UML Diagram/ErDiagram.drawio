@@ -1,6 +1,6 @@
 <mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.5.2 Chrome/142.0.7444.265 Electron/39.6.1 Safari/537.36" version="29.5.2">
   <diagram id="NgtS_MiCP4gS4xyFPdJT" name="Page-1">
-    <mxGraphModel dx="1042" dy="626" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="2336" math="0" shadow="0">
+    <mxGraphModel dx="719" dy="432" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="2336" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -136,7 +136,7 @@
           <mxGeometry height="30" width="60" x="60" y="200" as="geometry" />
         </mxCell>
         <mxCell id="-2l6aEDmkKffhkb1WMyG-47" parent="1" style="swimlane;whiteSpace=wrap;html=1;startSize=23;" value="OrderItem" vertex="1">
-          <mxGeometry height="240" width="180" x="870" y="330" as="geometry">
+          <mxGeometry height="290" width="180" x="870" y="330" as="geometry">
             <mxRectangle height="30" width="70" x="25" y="32.5" as="alternateBounds" />
           </mxGeometry>
         </mxCell>
@@ -164,8 +164,14 @@
         <mxCell id="-2l6aEDmkKffhkb1WMyG-55" parent="-2l6aEDmkKffhkb1WMyG-47" style="ellipse;whiteSpace=wrap;html=1;" value="updatedAt" vertex="1">
           <mxGeometry height="30" width="60" x="106" y="160" as="geometry" />
         </mxCell>
-        <mxCell id="-2l6aEDmkKffhkb1WMyG-56" parent="-2l6aEDmkKffhkb1WMyG-47" style="ellipse;whiteSpace=wrap;html=1;" value="author_id" vertex="1">
-          <mxGeometry height="30" width="60" x="60" y="200" as="geometry" />
+        <mxCell id="-2l6aEDmkKffhkb1WMyG-56" parent="-2l6aEDmkKffhkb1WMyG-47" style="ellipse;whiteSpace=wrap;html=1;" value="returned_&lt;div&gt;quantity&lt;/div&gt;" vertex="1">
+          <mxGeometry height="50" width="70" x="10" y="200" as="geometry" />
+        </mxCell>
+        <mxCell id="MOD1wSIwEGCswcKyzgIN-12" parent="-2l6aEDmkKffhkb1WMyG-47" style="ellipse;whiteSpace=wrap;html=1;" value="author_id" vertex="1">
+          <mxGeometry height="30" width="60" x="60" y="250" as="geometry" />
+        </mxCell>
+        <mxCell id="MOD1wSIwEGCswcKyzgIN-13" parent="-2l6aEDmkKffhkb1WMyG-47" style="ellipse;whiteSpace=wrap;html=1;" value="replaced_&lt;div&gt;quantity&lt;/div&gt;" vertex="1">
+          <mxGeometry height="50" width="70" x="101" y="200" as="geometry" />
         </mxCell>
         <mxCell id="-2l6aEDmkKffhkb1WMyG-63" parent="1" style="swimlane;whiteSpace=wrap;html=1;" value="Cart" vertex="1">
           <mxGeometry height="130" width="180" x="580" y="170" as="geometry">

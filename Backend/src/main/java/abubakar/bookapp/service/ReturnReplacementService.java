@@ -190,62 +190,98 @@ public class ReturnReplacementService {
     // Update status done by admin
     @Transactional
     public ReturnReplacement updateStatus(Long id, String status) {
+
         ReturnReplacement rr = repo.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
-                        "Request not found with id: " + id));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Request not found with id: " + id));
 
         String oldStatus = rr.getStatus() == null ? "" : rr.getStatus().toUpperCase();
-        String newStatus = (status == null ? "" : status.toUpperCase());
+        String newStatus = status == null ? "" : status.toUpperCase();
 
-        // Idempotent no-op if already same status
+        // Prevent same status update
         if (oldStatus.equals(newStatus)) {
             return rr;
         }
 
-        // Only allow approving from PENDING
+        // Allow APPROVED only from PENDING
         if ("APPROVED".equals(newStatus) && !"PENDING".equals(oldStatus)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Can only approve requests that are in PENDING status.");
+                    "Only PENDING requests can be approved.");
         }
 
-        rr.setProcessedDate(LocalDateTime.now());
-        rr.setStatus(newStatus);
+        // Prevent skipping approval
+        if (("RETURNED".equals(newStatus) || "REPLACED".equals(newStatus))
+                && !"APPROVED".equals(oldStatus)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Request must be APPROVED before processing.");
+        }
 
-        if (!"APPROVED".equals(newStatus)) {
+        // Do NOT process anything at APPROVED stage
+        if ("APPROVED".equals(newStatus)) {
+            rr.setStatus("APPROVED");
+            rr.setProcessedDate(LocalDateTime.now());
             return repo.save(rr);
         }
 
-        // APPROVED path
+        // Fetch order only when needed
         Order order = orderService.getOrderById(rr.getOrderId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Order not found"));
 
         int qty = rr.getQuantity() == null ? 0 : rr.getQuantity();
         if (qty <= 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid quantity");
         }
 
-        // ---------------- TYPE-SPECIFIC LOGIC ----------------
-        if ("REPLACEMENT".equalsIgnoreCase(rr.getType())) {
+        // ---------------- FINAL PROCESSING ----------------
 
-            // First check stock availability
-            checkReplacementStock(rr.getBookId(), qty);
+        // RETURN FLOW
+        if ("RETURNED".equals(newStatus)) {
 
-            // Adjust order item quantity
-            adjustOrderForReturnOrReplacement(order, rr, qty);
+            if (!"RETURN".equalsIgnoreCase(rr.getType())) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "This request is not a RETURN type.");
+            }
 
-            // Then decrease stock
-            decreaseBookStock(rr.getBookId(), qty);
-
-            rr.setDeliveryDate(LocalDateTime.now().plusDays(3));
-
-        } else {
-
-            // RETURN case
             adjustOrderForReturnOrReplacement(order, rr, qty);
         }
 
-        // Save changes
+        // REPLACEMENT FLOW
+        else if ("REPLACED".equals(newStatus)) {
+
+            if (!"REPLACEMENT".equalsIgnoreCase(rr.getType())) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "This request is not a REPLACEMENT type.");
+            }
+
+            checkReplacementStock(rr.getBookId(), qty);
+
+            adjustOrderForReturnOrReplacement(order, rr, qty);
+
+            decreaseBookStock(rr.getBookId(), qty);
+
+            rr.setDeliveryDate(LocalDateTime.now().plusDays(3));
+        }
+
+        // REJECT FLOW (no processing needed)
+        else if ("REJECTED".equals(newStatus)) {
+            rr.setStatus("REJECTED");
+            rr.setProcessedDate(LocalDateTime.now());
+            return repo.save(rr);
+        }
+
+        else {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Invalid status transition.");
+        }
+
+        // Save updated order after processing
         orderService.saveOrder(order);
+
+        // Update request
+        rr.setStatus(newStatus);
+        rr.setProcessedDate(LocalDateTime.now());
+
         return repo.save(rr);
     }
 
@@ -255,23 +291,50 @@ public class ReturnReplacementService {
      * for both RETURN and REPLACEMENT approval flows.
      */
     private void adjustOrderForReturnOrReplacement(Order order, ReturnReplacement rr, int qty) {
+
         order.getItems().stream()
                 .filter(i -> i.getBookId().equals(rr.getBookId()))
                 .findFirst()
                 .ifPresent(orderItem -> {
-                    int newQty = orderItem.getQuantity() - qty;
-                    if (newQty < 0)
-                        newQty = 0;
-                    orderItem.setQuantity(newQty);
-                    orderItem.setSubtotal(orderItem.getUnitPrice() * newQty);
+
+                    int alreadyProcessed = orderItem.getReturnedQuantity()
+                            + orderItem.getReplacedQuantity();
+
+                    int remaining = orderItem.getQuantity() - alreadyProcessed;
+
+                    if (qty > remaining) {
+                        throw new ResponseStatusException(
+                                HttpStatus.BAD_REQUEST,
+                                "Only " + remaining + " items available for return/replacement");
+                    }
+
+                    if ("RETURN".equalsIgnoreCase(rr.getType())) {
+                        orderItem.setReturnedQuantity(
+                                orderItem.getReturnedQuantity() + qty);
+                    }
+
+                    if ("REPLACEMENT".equalsIgnoreCase(rr.getType())) {
+                        orderItem.setReplacedQuantity(
+                                orderItem.getReplacedQuantity() + qty);
+                    }
+
+                    // Calculate effective quantity (for billing only)
+                    int effectiveQty = orderItem.getQuantity()
+                            - orderItem.getReturnedQuantity()
+                            - orderItem.getReplacedQuantity();
+
+                    if (effectiveQty < 0)
+                        effectiveQty = 0;
+
+                    orderItem.setSubtotal(orderItem.getUnitPrice() * effectiveQty);
                 });
 
+        // Recalculate order totals
         float subtotal = (float) order.getItems().stream()
                 .mapToDouble(OrderItem::getSubtotal)
                 .sum();
 
         float gst = subtotal * 0.05f;
-
         float total = subtotal + gst;
 
         order.setSubtotal(subtotal);

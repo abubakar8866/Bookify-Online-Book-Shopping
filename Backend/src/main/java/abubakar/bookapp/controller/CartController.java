@@ -5,6 +5,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import abubakar.bookapp.models.Book;
 import abubakar.bookapp.models.User;
+import abubakar.bookapp.payload.UserDetailsDTO;
 import abubakar.bookapp.models.Cart;
 import abubakar.bookapp.repository.BookRepository;
 import abubakar.bookapp.service.CartService;
@@ -33,7 +34,7 @@ public class CartController {
     @Autowired
     private BookRepository bookRepo;
 
-    //Add book to cart
+    // Add book to cart
     @PostMapping("/{userId}/{bookId}")
     public ResponseEntity<?> addToCart(@PathVariable Long userId, @PathVariable Long bookId,
             Authentication authentication) {
@@ -52,7 +53,7 @@ public class CartController {
         return ResponseEntity.status(HttpStatus.CREATED).body(savedCart);
     }
 
-    //Get user cart
+    // Get user cart
     @GetMapping("/{userId}")
     public ResponseEntity<List<Cart>> getCart(@PathVariable Long userId, Authentication authentication) {
         if (authentication == null || authentication.getName() == null) {
@@ -63,16 +64,16 @@ public class CartController {
         return ResponseEntity.ok(userCart);
     }
 
-    //Get user name by userId
-    @GetMapping("/{userId}/name")
-    public ResponseEntity<String> getUserName(@PathVariable Long userId) {
-        String userName = cartService.getUserNameByUserId(userId);
-        return ResponseEntity.ok(userName);
+    // Get user details by userId
+    @GetMapping("/{userId}/details")
+    public ResponseEntity<UserDetailsDTO> getUserDetails(@PathVariable Long userId) {
+        return ResponseEntity.ok(cartService.getUserDetailsByUserId(userId));
     }
 
-    //Remove from cart
+    // Remove from cart
     @DeleteMapping("/{userId}/{cartId}")
-    public ResponseEntity<String> removeFromCart(@PathVariable Long userId, @PathVariable Long cartId, Authentication authentication) {
+    public ResponseEntity<String> removeFromCart(@PathVariable Long userId, @PathVariable Long cartId,
+            Authentication authentication) {
         if (authentication == null || authentication.getName() == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User is not authenticated.");
         }

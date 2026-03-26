@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getCart, removeFromCart, placeOrder, getUserNameByUserId, createRazorpayOrder, verifyRazorpayPayment, placeRazorpayOrder, fetchRazerpayKey } from '../api';
+import { getCart, removeFromCart, placeOrder, getUserDetailsByUserId, createRazorpayOrder, verifyRazorpayPayment, placeRazorpayOrder, fetchRazerpayKey } from '../api';
 import { useNavigate } from 'react-router-dom';
 import '../../src/style/OrderModal.css';
 import AlertModal from '../components/AlertModal';
@@ -24,11 +24,16 @@ function CartPage() {
       return;
     }
 
-    getUserNameByUserId(userId)
-      .then(response => setUserName(response.data))
+    getUserDetailsByUserId(userId)
+      .then(response => {
+        const data = response.data;
+
+        setUserName(data.name || "");
+        setAddress(data.address || "");
+      })
       .catch(error => {
         console.error(error);
-        handleError(error, "Failed to fetch username.");
+        handleError(error, "Failed to fetch user details.");
       });
 
     getCart(userId)
@@ -87,7 +92,7 @@ function CartPage() {
           })
           .catch(error => {
             console.error('Failed to remove from cart:', error);
-            handleError(error,"Could not remove item from cart.");
+            handleError(error, "Could not remove item from cart.");
           });
       },
     });
@@ -194,7 +199,7 @@ function CartPage() {
               }
             } catch (err) {
               console.error('Payment verification failed:', err);
-              handleError(err,"An error occurred during payment verification.");
+              handleError(err, "An error occurred during payment verification.");
             }
           },
           prefill: { name: userName, contact: phoneNumber },
@@ -221,7 +226,7 @@ function CartPage() {
 
     } catch (error) {
       console.error('Order placement failed:', error);
-      handleError(error,"Failed to place order. Please try again.");
+      handleError(error, "Failed to place order. Please try again.");
     }
   };
 
@@ -362,17 +367,17 @@ function CartPage() {
 
               <div className="d-flex justify-content-between flex-wrap gap-2">
                 <button
-                  className="btn btn-secondary w-100 w-sm-auto"
-                  onClick={() => setShowOrderForm(false)}
-                >
-                  Cancel
-                </button>
-                <button
                   className="btn btn-success w-100 w-sm-auto"
                   onClick={submitOrder}
                   disabled={!userName || !address || !phoneNumber || !/^\+?\d{10,15}$/.test(phoneNumber)}
                 >
                   Submit Order
+                </button>
+                <button
+                  className="btn btn-secondary w-100 w-sm-auto"
+                  onClick={() => setShowOrderForm(false)}
+                >
+                  Cancel
                 </button>
               </div>
             </div>

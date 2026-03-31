@@ -60,16 +60,6 @@ function OrderPage() {
       return;
     }
 
-    // Autofill only when modal opens
-    if (returnModal.visible && returnModal.order) {
-      setReturnForm((prev) => ({
-        ...prev,
-        customerName: returnModal.order.userName || "",
-        customerAddress: returnModal.order.address || "",
-        customerPhone: returnModal.order.phoneNumber || "",
-      }));
-    }
-
     getOrdersByUserId(userId)
       .then(res => {
         const sorted = res.data.sort(
@@ -308,10 +298,10 @@ function OrderPage() {
     });
 
     if (errors.length > 0) {
-      // 🔴 show errors under dropzone
+      //show errors under dropzone
       rsetErrors((prev) => ({ ...prev, images: errors.join(" ") }));
     } else {
-      // ✅ clear previous error if all valid
+      //clear previous error if all valid
       rsetErrors((prev) => ({ ...prev, images: "" }));
     }
 
@@ -379,13 +369,18 @@ function OrderPage() {
     const threeDaysLater = new Date(today.setDate(today.getDate() + 3))
       .toISOString().split("T")[0];
 
+    const remainingQty =
+      item.quantity -
+      (item.returnedQuantity || 0) -
+      (item.replacedQuantity || 0);
+
     setReturnForm({
-      customerName: '',
-      customerAddress: '',
-      customerPhone: '',
-      quantity: item.quantity,
+      customerName: order.userName || "",
+      customerAddress: order.address || "",
+      customerPhone: order.phoneNumber || "",
+      quantity: remainingQty > 0 ? remainingQty : 1,
       type: 'RETURN',
-      reason: '',
+      reason: 'Bad Condition',
       deliveryDate: threeDaysLater,
       images: []
     });

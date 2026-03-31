@@ -22,7 +22,7 @@ function AdminDashboard() {
 
   useEffect(() => {
     loadDashboardStats();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleError = (error, fallbackMessage = "Something went wrong. Please try again.") => {
@@ -54,7 +54,7 @@ function AdminDashboard() {
       setStats(res.data);
     } catch (error) {
       console.error(error);
-      handleError(error,"Failed to load stats.");
+      handleError(error, "Failed to load stats.");
     } finally {
       setLoading(false);
     }
@@ -66,7 +66,7 @@ function AdminDashboard() {
       setRangeStats(res.data);
     } catch (error) {
       console.error(error);
-      handleError(error,"Failed to load weekly stats.");
+      handleError(error, "Failed to load weekly stats.");
     }
   };
 
@@ -76,7 +76,7 @@ function AdminDashboard() {
       setRangeStats(res.data);
     } catch (error) {
       console.error(error);
-      handleError(error,"Failed to load monthly stats.");
+      handleError(error, "Failed to load monthly stats.");
     }
   };
 
@@ -90,7 +90,7 @@ function AdminDashboard() {
       setRangeStats(res.data);
     } catch (error) {
       console.error(error);
-      handleError(error,"Failed to load range stats.");
+      handleError(error, "Failed to load range stats.");
     }
   };
 
@@ -219,7 +219,16 @@ function AdminDashboard() {
                         <td>{index + 1}</td>
                         <td className="text-truncate" style={{ maxWidth: "150px" }}>{order.user?.email ?? "N/A"}</td>
                         <td>{order.user?.name ?? "N/A"}</td>
-                        <td>₹{safeToFixed(order.total ?? order.totalAmount)}</td>
+                        <td>
+                          {Number(order.total ?? order.totalAmount) === 0
+                            ? (
+                              <span className="badge bg-secondary">
+                                Returned / Replaced
+                              </span>
+                            )
+                            : `₹${safeToFixed(order.total ?? order.totalAmount)}`
+                          }
+                        </td>
                         <td>
                           <span
                             className={`badge ${order.orderStatus === "Delivered"

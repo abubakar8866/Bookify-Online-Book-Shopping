@@ -245,7 +245,7 @@ function AdminOrderPage() {
                                                 if (order.orderMode === "UPI" && razorpayInfoMap[order.id]) {
                                                     rows.push(
                                                         <tr key={`razorpay-${order.id}`}>
-                                                            <td colSpan={8} style={{ backgroundColor: "#f8f9fa", padding: "2px" }}>
+                                                            <td colSpan={9} style={{ backgroundColor: "#f8f9fa", padding: "2px" }}>
                                                                 <strong>Razorpay Details:</strong>
                                                                 <table className="table table-sm table-bordered mt-2 mb-0" style={{ fontSize: "0.85rem" }}>
                                                                     <tbody>

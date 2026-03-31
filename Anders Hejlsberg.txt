@@ -1,0 +1,1 @@
+Anders Hejlsberg (born 2 December 1960) is a Danish software engineer who co-designed several programming languages and development tools. He was the original author of Turbo Pascal and the chief architect of Delphi. He currently works for Microsoft as the lead architect of C# and core developer on TypeScript.
